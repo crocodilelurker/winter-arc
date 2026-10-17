@@ -56,6 +56,18 @@ const TILES = [
       </svg>
     ),
   },
+  {
+    id: 'expenses',
+    name: 'Daily Expenses',
+    desc: 'Log daily expenditures, 3-question necessity checks, monthly budgets, and groups.',
+    color: '#06b6d4',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    ),
+  },
 ]
 
 type Props = {

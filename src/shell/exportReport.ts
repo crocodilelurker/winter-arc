@@ -39,6 +39,12 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
   let daysAllHabitsFulfilled = 0
   let daysWithHabitActivity = 0
 
+  let totalExpenses = 0
+  let necessaryExpenses = 0
+  let unnecessaryExpenses = 0
+  let totalPurchases = 0
+  const currency = db.features.expenses?.currency || '₹'
+
   const dailyMarkdownSections: string[] = []
 
   for (const dateStr of dateRange) {
@@ -129,6 +135,28 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
       daySections.push(nnText)
     }
 
+    // 5. Daily Expenses
+    const expDay = db.features.expenses?.days?.[dateStr]
+    if (expDay && expDay.items && expDay.items.length > 0) {
+      const dayTotal = expDay.items.reduce((sum, it) => sum + it.amount, 0)
+      const dayNec = expDay.items.filter((it) => it.isNecessary).reduce((sum, it) => sum + it.amount, 0)
+      const dayUnnec = expDay.items.filter((it) => !it.isNecessary).reduce((sum, it) => sum + it.amount, 0)
+
+      totalExpenses += dayTotal
+      necessaryExpenses += dayNec
+      unnecessaryExpenses += dayUnnec
+      totalPurchases += expDay.items.length
+
+      let expText = `**Expenses (${currency}${dayTotal}):** (${currency}${dayNec} necessary, ${currency}${dayUnnec} discretionary)\n`
+      expText += expDay.items
+        .map((it) => {
+          const necTag = it.isNecessary ? '[Necessary]' : '[Discretionary]'
+          return `  - ${it.title}: ${currency}${it.amount} ${necTag}`
+        })
+        .join('\n')
+      daySections.push(expText)
+    }
+
     if (daySections.length > 0) {
       dailyMarkdownSections.push(`${dayHeader}\n\n${daySections.join('\n\n')}`)
     } else {
@@ -160,6 +188,8 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
 | **Tasks** | Completed Tasks | **${completedTasks} / ${totalTasks}** (${taskRate}%) |
 | **Gym & Workouts** | Workouts Completed | **${totalWorkouts} sessions** (${totalSetsCompleted} sets logged) |
 | **Daily Habits** | 100% Completion Days | **${daysAllHabitsFulfilled} / ${totalDays} days** (${fulfillmentRate}%) |
+| **Daily Expenses** | Total Spend | **${currency}${Math.round(totalExpenses * 100) / 100}** (${totalPurchases} items logged) |
+| | Necessary vs Discretionary | **${currency}${Math.round(necessaryExpenses * 100) / 100}** necessary · **${currency}${Math.round(unnecessaryExpenses * 100) / 100}** discretionary |
 
 ---
 

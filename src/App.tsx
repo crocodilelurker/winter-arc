@@ -3,6 +3,7 @@ import CalorieCounter from './features/calorie-counter'
 import TodoGraph from './features/todo-graph'
 import Gym from './features/gym'
 import NonNegotiables from './features/non-negotiables'
+import Expenses from './features/expenses'
 import { useDb } from './db/useDb'
 import Gate from './shell/Gate'
 import Menu from './shell/Menu'
@@ -65,6 +66,16 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+  {
+    id: 'expenses',
+    label: 'Expenses',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="1" x2="12" y2="23" />
+        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+      </svg>
+    ),
+  },
 ]
 
 const FEATURE_TITLES: Record<string, string> = {
@@ -72,6 +83,7 @@ const FEATURE_TITLES: Record<string, string> = {
   'todo-graph': 'Tasks & Graph',
   'gym': 'Workouts',
   'non-negotiables': 'Daily Habits',
+  'expenses': 'Daily Expenses',
 }
 
 export default function App() {
@@ -218,6 +230,16 @@ export default function App() {
                 handle.update((prev) => ({
                   ...prev,
                   features: { ...prev.features, nonNegotiables: next },
+                }))
+              }
+            />
+          ) : feature === 'expenses' ? (
+            <Expenses
+              data={db.features.expenses}
+              onChange={(next) =>
+                handle.update((prev) => ({
+                  ...prev,
+                  features: { ...prev.features, expenses: next },
                 }))
               }
             />

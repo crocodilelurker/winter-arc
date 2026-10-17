@@ -18,6 +18,11 @@ import {
   createNonNegotiablesData,
   ensureNonNegotiablesData,
 } from '../features/non-negotiables/data'
+import {
+  type ExpensesData,
+  createExpensesData,
+  ensureExpensesData,
+} from '../features/expenses/data'
 
 export const DB_VERSION = 1
 
@@ -31,6 +36,7 @@ export type Db = {
     todoGraph: TodoGraphData
     gym: GymData
     nonNegotiables: NonNegotiablesData
+    expenses: ExpensesData
   }
 }
 
@@ -50,6 +56,7 @@ export function createDb(name: string): Db {
       todoGraph: createTodoGraphData(),
       gym: createGymData(),
       nonNegotiables: createNonNegotiablesData(),
+      expenses: createExpensesData(),
     },
   }
 }
@@ -95,6 +102,7 @@ export function parseDb(text: string): Db {
       todoGraph: ensureTodoGraphData(features.todoGraph),
       gym: ensureGymData(features.gym),
       nonNegotiables: ensureNonNegotiablesData(features.nonNegotiables),
+      expenses: ensureExpensesData(features.expenses),
     },
   }
 }
