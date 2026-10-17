@@ -1,0 +1,410 @@
+/* =================================================================
+   Daily Habits (Non-Negotiables) — Redesigned
+   ================================================================= */
+
+.habits-app {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeUp 0.2s ease;
+}
+
+/* ---- Status Banner ---- */
+.habits-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.habits-banner.is-done {
+  border-color: rgba(62,207,142,0.35);
+  background: rgba(62,207,142,0.04);
+}
+
+.habits-banner-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.habits-banner-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.habits-banner-sub {
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+.habits-banner-track {
+  width: min(200px, 100%);
+  height: 4px;
+  background: var(--surface-2);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+
+.habits-banner-fill {
+  height: 100%;
+  background: var(--blue);
+  border-radius: var(--r-full);
+  transition: width 0.3s ease;
+}
+
+.habits-banner-fill.is-done { background: var(--green); }
+
+.habits-banner-badge {
+  flex-shrink: 0;
+  padding: 6px 14px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.habits-banner-badge.done {
+  background: rgba(62,207,142,0.12);
+  color: var(--green);
+  border-color: rgba(62,207,142,0.3);
+}
+
+.habits-banner-badge.progress {
+  background: rgba(245,165,36,0.1);
+  color: var(--amber);
+  border-color: rgba(245,165,36,0.25);
+}
+
+/* ---- Workspace ---- */
+.habits-workspace {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .habits-workspace { grid-template-columns: 1fr; }
+}
+
+/* ---- Checklist panel ---- */
+.habits-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.habits-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.habits-panel-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* ---- Add habit form ---- */
+.add-habit-form {
+  background: var(--surface);
+  border: 1px dashed var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.add-habit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.add-habit-row input[type="text"] {
+  flex: 1 1 160px;
+}
+
+.add-habit-row select { flex: 0 0 auto; width: auto; }
+.add-habit-num { width: 70px !important; flex: 0 0 70px; }
+.add-habit-unit { width: 90px !important; flex: 0 0 90px; }
+
+/* ---- Habit card ---- */
+.habit-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.habit-item:hover { border-color: #35404f; }
+
+.habit-item.is-done {
+  border-color: rgba(62,207,142,0.3);
+  background: rgba(62,207,142,0.03);
+}
+
+.habit-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.habit-check {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 0;
+  color: transparent;
+  font-size: 13px;
+  font-weight: 700;
+  transition: all 0.15s;
+}
+
+.habit-check:hover { border-color: var(--green); color: var(--green); background: transparent; }
+
+.habit-check.is-done {
+  background: var(--green);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.habit-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.habit-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.habit-item.is-done .habit-name { color: var(--text-3); }
+
+.habit-type-hint {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.habit-item-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Stepper */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.stepper-btn {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 16px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stepper-btn:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--text);
+  border-color: transparent;
+}
+
+.stepper-val {
+  min-width: 44px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  padding: 0 4px;
+}
+
+.stepper-val input {
+  width: 44px;
+  background: transparent;
+  border: none;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  padding: 0;
+  box-shadow: none;
+}
+
+.stepper-val input:focus { box-shadow: none; border: none; }
+
+.stepper-of {
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 0 6px 0 2px;
+}
+
+.habit-del {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-3);
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.habit-del:hover { background: var(--red-dim); color: var(--red); border-color: var(--red-border); }
+
+/* ---- Calendar panel ---- */
+.habits-cal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.habits-cal-head {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border-2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.habits-cal-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.habits-cal-stat-done {
+  font-weight: 600;
+  color: var(--green);
+}
+
+.habits-cal-stat-miss {
+  font-weight: 600;
+  color: var(--amber);
+}
+
+.habits-cal-stat-sep { color: var(--text-3); }
+
+.habits-cal-body {
+  padding: 14px;
+}
+
+/* Calendar day states */
+.nn-cal-day {
+  aspect-ratio: 1;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s;
+  position: relative;
+  gap: 1px;
+}
+
+.nn-cal-day:hover { background: var(--hover); color: var(--text); border-color: var(--border); }
+.nn-cal-day.is-today { color: var(--blue); font-weight: 700; }
+.nn-cal-day.is-selected { background: var(--blue) !important; color: #fff !important; border-color: var(--blue) !important; }
+
+.nn-cal-day.day-done {
+  background: rgba(62,207,142,0.1);
+  border-color: rgba(62,207,142,0.3);
+  color: var(--green);
+}
+
+.nn-cal-day.day-missed {
+  background: rgba(245,165,36,0.08);
+  border-color: rgba(245,165,36,0.2);
+  color: var(--text-3);
+}
+
+.nn-cal-day.is-selected.day-done { background: var(--green) !important; border-color: var(--green) !important; color: #fff !important; }
+
+.nn-day-num { font-size: 11px; }
+.nn-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Legend */
+.habits-cal-legend {
+  display: flex;
+  gap: 14px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--border-2);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+}

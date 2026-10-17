@@ -1,0 +1,522 @@
+/* =================================================================
+   Calorie Counter — Redesigned
+   ================================================================= */
+
+.cc {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: fadeUp 0.2s ease;
+}
+
+/* ---- Top: Day summary + Calendar ---- */
+.cc-layout {
+  display: grid;
+  grid-template-columns: 1fr 260px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .cc-layout { grid-template-columns: 1fr; }
+}
+
+/* ---- Summary Card ---- */
+.cc-summary-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.cc-summary-head {
+  padding: 16px 20px 14px;
+  border-bottom: 1px solid var(--border-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cc-summary-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cc-summary-date h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cc-summary-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Macro bars */
+.macro-list { display: flex; flex-direction: column; gap: 10px; }
+
+.macro-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.macro-row-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.macro-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.macro-values {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.macro-val { font-weight: 600; color: var(--text); }
+.macro-goal { color: var(--text-3); }
+
+.macro-track {
+  height: 5px;
+  background: var(--surface-2);
+  border-radius: var(--r-full);
+  overflow: hidden;
+}
+
+.macro-fill {
+  height: 100%;
+  border-radius: var(--r-full);
+  transition: width 0.3s ease;
+}
+
+.macro-fill.cal  { background: #f5a524; }
+.macro-fill.pro  { background: #4f82f7; }
+.macro-fill.carb { background: #9b8ef8; }
+.macro-fill.fat  { background: #3ecf8e; }
+.macro-fill.over { background: var(--red); }
+
+/* Water section */
+.water-section {
+  padding-top: 14px;
+  border-top: 1px solid var(--border-2);
+}
+
+.water-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.water-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+.water-count {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.water-glasses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 8px;
+}
+
+.glass-btn {
+  width: 20px;
+  height: 26px;
+  border: 1.5px solid #38a7e8;
+  border-radius: 3px 3px 5px 5px;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.1s, box-shadow 0.1s;
+}
+
+.glass-btn:hover { border-color: #38a7e8; background: rgba(56,167,232,0.2); }
+
+.glass-btn.is-full {
+  background: #38a7e8;
+  box-shadow: 0 0 6px rgba(56,167,232,0.5);
+}
+
+.water-btns {
+  display: flex;
+  gap: 6px;
+}
+
+/* ---- Calendar Panel ---- */
+.cc-cal-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 16px;
+}
+
+/* ---- Food Add Form ---- */
+.cc-food-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.cc-food-form-head {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-2);
+}
+
+.cc-food-form-head h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.cc-food-form-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Meal tabs */
+.meal-tabs {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.meal-tab {
+  padding: 4px 12px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+
+.meal-tab:hover { background: var(--hover); color: var(--text); border-color: var(--border); }
+
+.meal-tab.is-on {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Form fields */
+.ff-row {
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  gap: 8px;
+  align-items: start;
+}
+
+.ff-row-macros {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+@media (max-width: 640px) {
+  .ff-row { grid-template-columns: 1fr; }
+  .ff-row-macros { grid-template-columns: 1fr 1fr; }
+}
+
+.ff-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ff-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ff-hint {
+  font-size: 11px;
+  color: var(--text-3);
+  padding: 4px 0;
+}
+
+/* Autocomplete */
+.ff-suggest-wrap { position: relative; }
+
+.ff-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  box-shadow: var(--sh-md);
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+  list-style: none;
+}
+
+.ff-suggest-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+}
+
+.ff-suggest-item:hover, .ff-suggest-item.is-active {
+  background: var(--hover);
+  border-color: transparent;
+  color: var(--text);
+}
+
+.ff-sug-name { font-size: 13px; font-weight: 500; color: var(--text); }
+.ff-sug-meta { font-size: 11px; color: var(--text-3); }
+
+/* ---- Meals Grid ---- */
+.meals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.meal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.meal-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-2);
+  background: var(--bg2);
+}
+
+.meal-card-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.meal-card-cals {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+}
+
+.meal-card-macros {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.meal-entries {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.meal-entry {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.1s;
+}
+
+.meal-entry:hover { background: var(--hover); border-color: var(--border); }
+
+.entry-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.entry-qty {
+  font-size: 11px;
+  color: var(--text-3);
+  font-style: normal;
+}
+
+.entry-kcal {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-2);
+  white-space: nowrap;
+}
+
+.entry-del {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.1s;
+}
+
+.meal-entry:hover .entry-del { opacity: 1; }
+
+.entry-del:hover {
+  background: var(--red-dim);
+  color: var(--red);
+  border-color: transparent;
+}
+
+.meal-empty {
+  padding: 12px 10px;
+  font-size: 12px;
+  color: var(--text-3);
+  font-style: italic;
+}
+
+/* ---- Panels: Goals + Library ---- */
+.cc-panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.cc-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.cc-panel-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 0;
+}
+
+.cc-panel-toggle:hover { background: var(--hover); border-color: transparent; color: var(--text); }
+
+.cc-panel-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-full);
+  padding: 2px 8px;
+}
+
+.cc-panel-body {
+  padding: 4px 8px 12px;
+}
+
+.goals-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+}
+
+.goal-row {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  align-items: center;
+  gap: 12px;
+}
+
+.goal-row-label {
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.library-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.library-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 8px;
+  border-radius: var(--r-sm);
+  border: 1px solid transparent;
+  transition: all 0.1s;
+}
+
+.library-item:hover { background: var(--hover); border-color: var(--border); }
+
+.lib-name { font-size: 12px; font-weight: 500; color: var(--text); }
+.lib-meta { font-size: 11px; color: var(--text-3); }
+.lib-del {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.1s;
+}
+.library-item:hover .lib-del { opacity: 1; }
+.lib-del:hover { background: var(--red-dim); color: var(--red); border-color: transparent; }
