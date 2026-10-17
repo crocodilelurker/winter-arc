@@ -23,6 +23,100 @@ const supportsFSA =
   'showOpenFilePicker' in window &&
   'showSaveFilePicker' in window
 
+const KEY_SESSION_DB = 'growth-arc:session-db'
+const KEY_SESSION_FILENAME = 'growth-arc:session-filename'
+const KEY_SESSION_DIRTY = 'growth-arc:session-dirty'
+
+function loadSavedSession(): { db: Db | null; fileName: string | null; dirty: boolean } {
+  try {
+    const raw = localStorage.getItem(KEY_SESSION_DB)
+    if (!raw) return { db: null, fileName: null, dirty: false }
+    const parsed = parseDb(raw)
+    const name = localStorage.getItem(KEY_SESSION_FILENAME) || null
+    const isDirty = localStorage.getItem(KEY_SESSION_DIRTY) === 'true'
+    return { db: parsed, fileName: name, dirty: isDirty }
+  } catch (err) {
+    console.warn('Failed to restore session from localStorage:', err)
+    return { db: null, fileName: null, dirty: false }
+  }
+}
+
+function clearSavedSession() {
+  try {
+    localStorage.removeItem(KEY_SESSION_DB)
+    localStorage.removeItem(KEY_SESSION_FILENAME)
+    localStorage.removeItem(KEY_SESSION_DIRTY)
+  } catch {}
+}
+
+function persistSession(db: Db | null, fileName: string | null, dirty: boolean) {
+  try {
+    if (db) {
+      localStorage.setItem(KEY_SESSION_DB, serializeDb(db))
+      if (fileName) {
+        localStorage.setItem(KEY_SESSION_FILENAME, fileName)
+      } else {
+        localStorage.removeItem(KEY_SESSION_FILENAME)
+      }
+      localStorage.setItem(KEY_SESSION_DIRTY, String(dirty))
+    } else {
+      clearSavedSession()
+    }
+  } catch (err) {
+    console.warn('Failed to persist session to localStorage:', err)
+  }
+}
+
+function getHandleFromIdb(): Promise<FileSystemFileHandle | null> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('indexedDB' in window)) return resolve(null)
+    const req = indexedDB.open('growth-arc-store', 1)
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore('handles')
+    }
+    req.onsuccess = () => {
+      const db = req.result
+      try {
+        const tx = db.transaction('handles', 'readonly')
+        const store = tx.objectStore('handles')
+        const getReq = store.get('current')
+        getReq.onsuccess = () => resolve((getReq.result as FileSystemFileHandle) || null)
+        getReq.onerror = () => resolve(null)
+      } catch {
+        resolve(null)
+      }
+    }
+    req.onerror = () => resolve(null)
+  })
+}
+
+function saveHandleToIdb(handle: FileSystemFileHandle | null): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('indexedDB' in window)) return resolve()
+    const req = indexedDB.open('growth-arc-store', 1)
+    req.onupgradeneeded = () => {
+      req.result.createObjectStore('handles')
+    }
+    req.onsuccess = () => {
+      const db = req.result
+      try {
+        const tx = db.transaction('handles', 'readwrite')
+        const store = tx.objectStore('handles')
+        if (handle) {
+          store.put(handle, 'current')
+        } else {
+          store.delete('current')
+        }
+        tx.oncomplete = () => resolve()
+        tx.onerror = () => resolve()
+      } catch {
+        resolve()
+      }
+    }
+    req.onerror = () => resolve()
+  })
+}
+
 async function verifyPermission(
   fileHandle: FileSystemFileHandle,
   readWrite: boolean,
@@ -56,10 +150,11 @@ function downloadAsBlob(db: Db, filename?: string) {
 }
 
 export function useDb(): DbHandle {
-  const [db, setDb] = useState<Db | null>(null)
-  const [dirty, setDirty] = useState(false)
+  const initial = useRef(loadSavedSession()).current
+  const [db, setDb] = useState<Db | null>(initial.db)
+  const [dirty, setDirty] = useState(initial.dirty)
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
-  const [fileName, setFileName] = useState<string | null>(null)
+  const [fileName, setFileName] = useState<string | null>(initial.fileName)
   const [isSaving, setIsSaving] = useState(false)
 
   const dbRef = useRef<Db | null>(db)
@@ -71,7 +166,19 @@ export function useDb(): DbHandle {
   const fileNameRef = useRef<string | null>(fileName)
   fileNameRef.current = fileName
 
-  // Nothing is persisted anywhere, so a close with unsaved changes loses them.
+  // Try to restore file handle from IndexedDB on initial mount
+  useEffect(() => {
+    void getHandleFromIdb().then((h) => {
+      if (h) setFileHandle(h)
+    })
+  }, [])
+
+  // Auto-persist active session state to localStorage on every change
+  useEffect(() => {
+    persistSession(db, fileName, dirty)
+  }, [db, fileName, dirty])
+
+  // Warn on page unload if changes have not been saved to the file
   useEffect(() => {
     if (!dirty) return
     const warn = (e: BeforeUnloadEvent) => e.preventDefault()
@@ -89,6 +196,7 @@ export function useDb(): DbHandle {
     setFileHandle(null)
     setFileName(null)
     setDirty(false)
+    void saveHandleToIdb(null)
   }, [])
 
   const open = useCallback(async (file: File, handle?: FileSystemFileHandle | null) => {
@@ -97,6 +205,7 @@ export function useDb(): DbHandle {
     setFileHandle(handle ?? null)
     setFileName(handle ? handle.name : file.name)
     setDirty(false)
+    void saveHandleToIdb(handle ?? null)
   }, [])
 
   const openWithPicker = useCallback(async (): Promise<boolean> => {
@@ -119,6 +228,7 @@ export function useDb(): DbHandle {
       setFileHandle(handle)
       setFileName(handle.name)
       setDirty(false)
+      void saveHandleToIdb(handle)
       return true
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
@@ -152,6 +262,7 @@ export function useDb(): DbHandle {
         setFileHandle(handle)
         setFileName(handle.name)
         setDirty(false)
+        void saveHandleToIdb(handle)
         return
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'AbortError') {
@@ -201,6 +312,8 @@ export function useDb(): DbHandle {
     setFileHandle(null)
     setFileName(null)
     setDirty(false)
+    clearSavedSession()
+    void saveHandleToIdb(null)
   }, [])
 
   return {

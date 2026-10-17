@@ -88,8 +88,19 @@ const FEATURE_TITLES: Record<string, string> = {
 
 export default function App() {
   const handle = useDb()
-  const [feature, setFeature] = useState<string | null>(null)
+  const [feature, setFeature] = useState<string | null>(() => {
+    return sessionStorage.getItem('growth-arc:active-feature') || null
+  })
   const [showExport, setShowExport] = useState(false)
+
+  // Remember active feature tab in sessionStorage
+  useEffect(() => {
+    if (feature) {
+      sessionStorage.setItem('growth-arc:active-feature', feature)
+    } else {
+      sessionStorage.removeItem('growth-arc:active-feature')
+    }
+  }, [feature])
 
   // Cmd/Ctrl+S to save
   useEffect(() => {
@@ -165,6 +176,7 @@ export default function App() {
             className="sidebar-nav-item"
             onClick={() => {
               if (handle.dirty && !window.confirm('Unsaved changes. Close anyway?')) return
+              sessionStorage.removeItem('growth-arc:active-feature')
               setFeature(null)
               handle.close()
             }}
