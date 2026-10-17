@@ -104,7 +104,7 @@ export default function App() {
       <aside className="app-sidebar">
         <div className="sidebar-top">
           <div className="sidebar-brand">
-            Winter <span>Arc</span>
+            Growth <span>Arc</span>
           </div>
           {handle.fileName && (
             <div className="sidebar-file" title={handle.fileName}>{handle.fileName}</div>

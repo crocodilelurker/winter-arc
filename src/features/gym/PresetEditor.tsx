@@ -117,7 +117,7 @@ export default function PresetEditor({
             type="text"
             className="preset-name-input"
             value={preset.name}
-            placeholder="Routine name (e.g. Winter Arc 5-Day Split)..."
+            placeholder="Routine name (e.g. Growth Arc 5-Day Split)..."
             onChange={(e) => setPreset((p) => ({ ...p, name: e.target.value }))}
           />
 

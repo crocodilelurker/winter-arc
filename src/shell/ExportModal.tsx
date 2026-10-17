@@ -53,7 +53,7 @@ export default function ExportModal({ db, onClose }: Props) {
       return
     }
     const md = generateMarkdownReport(db, startDate, endDate)
-    const filename = `winter-arc-report-${startDate}-to-${endDate}.md`
+    const filename = `growth-arc-report-${startDate}-to-${endDate}.md`
     downloadFile(md, filename, 'text/markdown;charset=utf-8')
   }
 

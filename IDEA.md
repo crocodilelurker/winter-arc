@@ -1,4 +1,4 @@
-# Winter Arc — Core Idea
+# Growth Arc — Core Idea
 
 ## The one hard rule
 
@@ -54,7 +54,7 @@ The save file:
 
 ```json
 {
-  "app": "winter-arc",
+  "app": "growth-arc",
   "version": 1,
   "profile": { "name": "...", "startedOn": "YYYY-MM-DD" },
   "updatedAt": "ISO timestamp",

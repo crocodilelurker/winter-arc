@@ -48,7 +48,7 @@ export default function Gate({ handle }: { handle: DbHandle }) {
     <div className="gate-root">
       <div className="gate-card">
         <div className="gate-logo">
-          <h1>Winter <span>Arc</span></h1>
+          <h1>Growth <span>Arc</span></h1>
           <p>Your private tracker for nutrition, tasks, workouts, and habits.</p>
         </div>
 

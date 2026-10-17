@@ -142,7 +142,7 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
   const taskRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
   const fulfillmentRate = totalDays > 0 ? Math.round((daysAllHabitsFulfilled / totalDays) * 100) : 0
 
-  const report = `# Winter Arc Progress Report
+  const report = `# Growth Arc Progress Report
 
 **Name:** ${userName}  
 **Date Range:** ${startDate} to ${endDate} (${totalDays} ${totalDays === 1 ? 'day' : 'days'})  
@@ -168,7 +168,7 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
 ${dailyMarkdownSections.join('\n\n---\n\n')}
 
 ---
-*Winter Arc offline progress report.*
+*Growth Arc offline progress report.*
 `
   return report
 }
@@ -238,7 +238,7 @@ export function generatePrintableHtml(db: Db, startDate: string, endDate: string
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Winter Arc Report - ${userName} (${startDate} to ${endDate})</title>
+  <title>Growth Arc Report - ${userName} (${startDate} to ${endDate})</title>
   <style>
     @page {
       size: A4;

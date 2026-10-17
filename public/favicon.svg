@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bullGrad" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#60a5fa" />
+      <stop offset="50%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="hornGrad" x1="4" y1="4" x2="60" y2="40" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#93c5fd" />
+      <stop offset="100%" stop-color="#3b82f6" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded shield / badge -->
+  <rect width="64" height="64" rx="14" fill="#0d0f12" />
+  <rect x="1" y="1" width="62" height="62" rx="13" stroke="#262c36" stroke-width="2" />
+
+  <!-- Bull Horns (sweeping upward and outward with sharp power) -->
+  <path
+    d="M 12 10
+       C 8 18 10 28 17 32
+       C 21 34 24 33 24 30
+       C 24 25 18 20 17 14
+       C 16 11 14 10 12 10 Z"
+    fill="url(#hornGrad)"
+  />
+  <path
+    d="M 52 10
+       C 56 18 54 28 47 32
+       C 43 34 40 33 40 30
+       C 40 25 46 20 47 14
+       C 48 11 50 10 52 10 Z"
+    fill="url(#hornGrad)"
+  />
+
+  <!-- Bull Crown / Head Brow -->
+  <polygon
+    points="18,29 46,29 42,37 32,41 22,37"
+    fill="url(#bullGrad)"
+  />
+
+  <!-- Angular Forehead Bridge -->
+  <polygon
+    points="22,37 42,37 38,47 32,49 26,47"
+    fill="#2563eb"
+  />
+
+  <!-- Snout / Muzzle -->
+  <polygon
+    points="26,47 38,47 36,54 28,54"
+    fill="#1d4ed8"
+  />
+
+  <!-- Nostrils -->
+  <circle cx="30" cy="51.5" r="1.2" fill="#0d0f12" />
+  <circle cx="34" cy="51.5" r="1.2" fill="#0d0f12" />
+
+  <!-- Eyes (sharp, focused, aggressive angle) -->
+  <polygon points="23,34 28,34 27,36 24,36" fill="#ffffff" />
+  <polygon points="41,34 36,34 37,36 40,36" fill="#ffffff" />
+
+  <!-- Accent Brow Line -->
+  <path
+    d="M 18 29 L 32 35 L 46 29"
+    stroke="#93c5fd"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

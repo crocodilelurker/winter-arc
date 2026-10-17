@@ -60,7 +60,7 @@ export const DAY_NAMES = [
   'Sunday',
 ] as const
 
-export const DEFAULT_PRESET_ID = 'preset-winter-arc-default'
+export const DEFAULT_PRESET_ID = 'preset-growth-arc-default'
 
 /**
  * The user's exact default 7-day map starting from Monday:
@@ -75,7 +75,7 @@ export const DEFAULT_PRESET_ID = 'preset-winter-arc-default'
 export function createDefaultPreset(): WorkoutPreset {
   return {
     id: DEFAULT_PRESET_ID,
-    name: 'Winter Arc 5-Day Split (Default)',
+    name: 'Growth Arc 5-Day Split (Default)',
     isDefault: true,
     days: [
       {

@@ -607,7 +607,7 @@ export function rolloverUnfinished(
 
 export function exportDayAsMarkdown(dayPlan: DayPlan): string {
   const lines: string[] = [
-    `# Winter Arc — Tasks for ${dayPlan.date}`,
+    `# Growth Arc — Tasks for ${dayPlan.date}`,
     `Generated on ${new Date().toLocaleDateString()}`,
     '',
   ]

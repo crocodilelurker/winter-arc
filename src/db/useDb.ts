@@ -105,7 +105,7 @@ export function useDb(): DbHandle {
       const [handle] = await window.showOpenFilePicker({
         types: [
           {
-            description: 'Winter Arc Save File',
+            description: 'Growth Arc Save File',
             accept: {
               'application/json': ['.json'],
             },
@@ -139,7 +139,7 @@ export function useDb(): DbHandle {
           suggestedName: fileNameRef.current || saveFileName(current),
           types: [
             {
-              description: 'Winter Arc Save File',
+              description: 'Growth Arc Save File',
               accept: {
                 'application/json': ['.json'],
               },

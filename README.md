@@ -1,4 +1,4 @@
-# Winter Arc ❄️
+# Growth Arc 🐂
 
 A private, local-first web application engineered for discipline and focused growth. Built with React 19, TypeScript, Vite, and a refined Linear/Notion-style dark mode interface using pure CSS and the Inter font.
 

@@ -1,28 +1,28 @@
 import {
+  type CalorieCounterData,
   createCalorieCounterData,
   ensureCalorieCounterData,
-  type CalorieCounterData,
 } from '../features/calorie-counter/data'
 import {
+  type TodoGraphData,
   createTodoGraphData,
   ensureTodoGraphData,
-  type TodoGraphData,
 } from '../features/todo-graph/data'
 import {
+  type GymData,
   createGymData,
   ensureGymData,
-  type GymData,
 } from '../features/gym/data'
 import {
+  type NonNegotiablesData,
   createNonNegotiablesData,
   ensureNonNegotiablesData,
-  type NonNegotiablesData,
 } from '../features/non-negotiables/data'
 
 export const DB_VERSION = 1
 
 export type Db = {
-  app: 'winter-arc'
+  app: 'growth-arc'
   version: number
   profile: { name: string; startedOn: string }
   updatedAt: string
@@ -41,7 +41,7 @@ export function todayKey(d = new Date()): string {
 
 export function createDb(name: string): Db {
   return {
-    app: 'winter-arc',
+    app: 'growth-arc',
     version: DB_VERSION,
     profile: { name: name.trim() || 'you', startedOn: todayKey() },
     updatedAt: new Date().toISOString(),
@@ -67,11 +67,11 @@ export function parseDb(text: string): Db {
     throw new Error("That file isn't valid JSON.")
   }
   if (!raw || typeof raw !== 'object') {
-    throw new Error("That file doesn't look like a Winter Arc save.")
+    throw new Error("That file doesn't look like a Growth Arc save.")
   }
   const obj = raw as Record<string, unknown>
-  if (obj.app !== 'winter-arc') {
-    throw new Error("That file doesn't look like a Winter Arc save.")
+  if (obj.app !== 'growth-arc' && obj.app !== 'winter-arc') {
+    throw new Error("That file doesn't look like a Growth Arc save.")
   }
   if (typeof obj.version === 'number' && obj.version > DB_VERSION) {
     throw new Error(
@@ -83,7 +83,7 @@ export function parseDb(text: string): Db {
   const features = (obj.features ?? {}) as Record<string, unknown>
 
   return {
-    app: 'winter-arc',
+    app: 'growth-arc',
     version: DB_VERSION,
     profile: {
       name: typeof profile.name === 'string' ? profile.name : 'you',
@@ -105,5 +105,5 @@ export function serializeDb(db: Db): string {
 
 export function saveFileName(db: Db): string {
   const slug = db.profile.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-  return `winter-arc${slug ? `-${slug}` : ''}-${todayKey()}.json`
+  return `growth-arc${slug ? `-${slug}` : ''}-${todayKey()}.json`
 }
