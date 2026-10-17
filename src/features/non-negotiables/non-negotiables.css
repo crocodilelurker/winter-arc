@@ -337,12 +337,20 @@
 .habits-cal-stat-sep { color: var(--text-3); }
 
 .habits-cal-body {
-  padding: 14px;
+  padding: 14px 16px 16px;
+}
+
+.habits-cal-body .mini-cal-grid {
+  gap: 3px;
 }
 
 /* Calendar day states */
 .nn-cal-day {
+  padding: 0 !important;
+  margin: 0;
+  width: 100%;
   aspect-ratio: 1;
+  min-width: 0;
   border-radius: var(--r-sm);
   font-size: 11px;
   font-weight: 500;
@@ -357,10 +365,20 @@
   transition: all 0.1s;
   position: relative;
   gap: 1px;
+  box-sizing: border-box;
 }
 
-.nn-cal-day:hover { background: var(--hover); color: var(--text); border-color: var(--border); }
-.nn-cal-day.is-today { color: var(--blue); font-weight: 700; }
+.nn-cal-day.is-outside {
+  opacity: 0.22;
+  color: var(--text-3);
+  cursor: default;
+  pointer-events: none;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+.nn-cal-day:hover:not(.is-outside) { background: var(--hover); color: var(--text); border-color: var(--border); }
+.nn-cal-day.is-today:not(.is-outside) { color: var(--blue); font-weight: 700; }
 .nn-cal-day.is-selected { background: var(--blue) !important; color: #fff !important; border-color: var(--blue) !important; }
 
 .nn-cal-day.day-done {
@@ -377,12 +395,19 @@
 
 .nn-cal-day.is-selected.day-done { background: var(--green) !important; border-color: var(--green) !important; color: #fff !important; }
 
-.nn-day-num { font-size: 11px; }
+.nn-day-num {
+  font-size: 11px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
 .nn-day-dot {
   width: 4px;
   height: 4px;
   border-radius: 50%;
   background: currentColor;
+  position: absolute;
+  bottom: 2px;
 }
 
 /* Legend */

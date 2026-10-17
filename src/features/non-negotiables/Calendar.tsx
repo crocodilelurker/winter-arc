@@ -29,7 +29,10 @@ export default function Calendar({ selectedDate, today, habits, history, onSelec
 
   const first = new Date(cursor.year, cursor.month, 1)
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate()
-  const leading = (first.getDay() + 6) % 7
+  const daysInPrevMonth = new Date(cursor.year, cursor.month, 0).getDate()
+  const leading = (first.getDay() + 6) % 7 // Monday = 0
+  const totalCells = leading + daysInMonth
+  const trailing = (7 - (totalCells % 7)) % 7
 
   function shift(by: number) {
     const d = new Date(cursor.year, cursor.month + by, 1)
@@ -53,9 +56,9 @@ export default function Calendar({ selectedDate, today, habits, history, onSelec
     <div className="habits-cal-card">
       <div className="habits-cal-head">
         <div className="mini-cal-nav">
-          <button type="button" className="cal-nav-btn" onClick={() => shift(-1)}>‹</button>
+          <button type="button" className="cal-nav-btn" onClick={() => shift(-1)} title="Previous month">‹</button>
           <strong style={{ fontSize: '13px' }}>{MONTHS[cursor.month]} {cursor.year}</strong>
-          <button type="button" className="cal-nav-btn" onClick={() => shift(1)}>›</button>
+          <button type="button" className="cal-nav-btn" onClick={() => shift(1)} title="Next month">›</button>
         </div>
         <div className="habits-cal-stats">
           <span className="habits-cal-stat-done">{doneCount} done</span>
@@ -66,8 +69,22 @@ export default function Calendar({ selectedDate, today, habits, history, onSelec
 
       <div className="habits-cal-body">
         <div className="mini-cal-grid">
-          {WEEKDAYS.map((w) => <span key={w} className="mini-cal-wd">{w}</span>)}
-          {Array.from({ length: leading }, (_, i) => <span key={`pad-${i}`} />)}
+          {/* Day of Week Headers */}
+          {WEEKDAYS.map((w) => (
+            <span key={w} className="mini-cal-wd">{w}</span>
+          ))}
+
+          {/* Leading Days from Previous Month */}
+          {Array.from({ length: leading }, (_, i) => {
+            const prevDay = daysInPrevMonth - leading + i + 1
+            return (
+              <span key={`prev-${i}`} className="nn-cal-day is-outside">
+                <span className="nn-day-num">{prevDay}</span>
+              </span>
+            )
+          })}
+
+          {/* Days of Current Month */}
           {Array.from({ length: daysInMonth }, (_, i) => {
             const day = i + 1
             const dk = keyOf(cursor.year, cursor.month, day)
@@ -91,8 +108,8 @@ export default function Calendar({ selectedDate, today, habits, history, onSelec
                 onClick={() => onSelectDate(dk)}
                 title={hasHabits && isPastOrToday
                   ? isAllFulfilled
-                    ? `All ${total} habits done`
-                    : `${fulfilled}/${total} habits done`
+                    ? `All ${total} habits completed`
+                    : `${fulfilled}/${total} habits completed`
                   : undefined}
               >
                 <span className="nn-day-num">{day}</span>
@@ -100,6 +117,16 @@ export default function Calendar({ selectedDate, today, habits, history, onSelec
                   <span className="nn-day-dot" />
                 )}
               </button>
+            )
+          })}
+
+          {/* Trailing Days to Complete Last Row */}
+          {Array.from({ length: trailing }, (_, i) => {
+            const nextDay = i + 1
+            return (
+              <span key={`next-${i}`} className="nn-cal-day is-outside">
+                <span className="nn-day-num">{nextDay}</span>
+              </span>
             )
           })}
         </div>
@@ -115,7 +142,12 @@ export default function Calendar({ selectedDate, today, habits, history, onSelec
           Missed
         </div>
         {selectedDate !== today && (
-          <button type="button" className="cal-jump-btn" style={{ marginLeft: 'auto' }} onClick={() => onSelectDate(today)}>
+          <button
+            type="button"
+            className="cal-jump-btn"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => onSelectDate(today)}
+          >
             Today
           </button>
         )}

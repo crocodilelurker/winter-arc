@@ -979,6 +979,9 @@ textarea { resize: vertical; min-height: 80px; }
 }
 
 .mini-cal-day {
+  padding: 0 !important;
+  margin: 0;
+  width: 100%;
   aspect-ratio: 1;
   border-radius: var(--r-sm);
   font-size: 11px;
@@ -995,6 +998,7 @@ textarea { resize: vertical; min-height: 80px; }
   position: relative;
   gap: 2px;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .mini-cal-day:hover { background: var(--hover); color: var(--text); border-color: var(--border); }
