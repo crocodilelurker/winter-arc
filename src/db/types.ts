@@ -23,6 +23,11 @@ import {
   createExpensesData,
   ensureExpensesData,
 } from '../features/expenses/data'
+import {
+  type LearningData,
+  createLearningData,
+  ensureLearningData,
+} from '../features/learnings/data'
 
 export const DB_VERSION = 1
 
@@ -37,6 +42,7 @@ export type Db = {
     gym: GymData
     nonNegotiables: NonNegotiablesData
     expenses: ExpensesData
+    learnings: LearningData
   }
 }
 
@@ -57,6 +63,7 @@ export function createDb(name: string): Db {
       gym: createGymData(),
       nonNegotiables: createNonNegotiablesData(),
       expenses: createExpensesData(),
+      learnings: createLearningData(),
     },
   }
 }
@@ -103,6 +110,7 @@ export function parseDb(text: string): Db {
       gym: ensureGymData(features.gym),
       nonNegotiables: ensureNonNegotiablesData(features.nonNegotiables),
       expenses: ensureExpensesData(features.expenses),
+      learnings: ensureLearningData(features.learnings),
     },
   }
 }

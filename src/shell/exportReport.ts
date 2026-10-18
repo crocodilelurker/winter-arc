@@ -43,6 +43,8 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
   let necessaryExpenses = 0
   let unnecessaryExpenses = 0
   let totalPurchases = 0
+  let totalLearnings = 0
+  let totalCreations = 0
   const currency = db.features.expenses?.currency || '₹'
 
   const dailyMarkdownSections: string[] = []
@@ -157,6 +159,28 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
       daySections.push(expText)
     }
 
+    // 6. Learnings & Creations
+    const lrnDay = db.features.learnings?.days?.[dateStr]
+    if (lrnDay && lrnDay.entries && lrnDay.entries.length > 0) {
+      const learns = lrnDay.entries.filter((e) => e.type === 'learning')
+      const creates = lrnDay.entries.filter((e) => e.type === 'creation')
+      totalLearnings += learns.length
+      totalCreations += creates.length
+
+      let lrnText = `**Learnings & Creations (${lrnDay.entries.length}):**\n`
+      if (lrnDay.dayNote) {
+        lrnText += `  *Reflection: "${lrnDay.dayNote}"*\n`
+      }
+      lrnText += lrnDay.entries
+        .map((e) => {
+          const typeTag = e.type === 'learning' ? '[LEARNED]' : '[CREATED]'
+          const desc = e.description ? ` — ${e.description}` : ''
+          return `  - ${typeTag} [${e.category}] **${e.title}**${desc}`
+        })
+        .join('\n')
+      daySections.push(lrnText)
+    }
+
     if (daySections.length > 0) {
       dailyMarkdownSections.push(`${dayHeader}\n\n${daySections.join('\n\n')}`)
     } else {
@@ -190,6 +214,7 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
 | **Daily Habits** | 100% Completion Days | **${daysAllHabitsFulfilled} / ${totalDays} days** (${fulfillmentRate}%) |
 | **Daily Expenses** | Total Spend | **${currency}${Math.round(totalExpenses * 100) / 100}** (${totalPurchases} items logged) |
 | | Necessary vs Discretionary | **${currency}${Math.round(necessaryExpenses * 100) / 100}** necessary · **${currency}${Math.round(unnecessaryExpenses * 100) / 100}** discretionary |
+| **Learnings & Creations** | Growth & Tangible Output | **${totalLearnings} learnings** · **${totalCreations} creations logged** |
 
 ---
 
