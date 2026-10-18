@@ -1,7 +1,14 @@
 import { useRef, useState } from 'react'
 import type { DbHandle } from '../db/useDb'
+import type { usePwa } from './usePwa'
 
-export default function Gate({ handle }: { handle: DbHandle }) {
+export default function Gate({
+  handle,
+  pwa,
+}: {
+  handle: DbHandle
+  pwa?: ReturnType<typeof usePwa>
+}) {
   const [mode, setMode] = useState<'choose' | 'new'>('choose')
   const [name, setName] = useState('')
   const [error, setError] = useState('')
@@ -83,6 +90,22 @@ export default function Gate({ handle }: { handle: DbHandle }) {
             <p className="gate-privacy">
               100% private. Everything is stored locally on your device.
             </p>
+
+            {pwa?.canInstall && (
+              <button
+                type="button"
+                className="sidebar-action-btn install-btn"
+                style={{ justifyContent: 'center', marginTop: '12px' }}
+                onClick={() => void pwa.installApp()}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Install Growth Arc App
+              </button>
+            )}
           </div>
         ) : (
           <form className="gate-form" onSubmit={handleStartNew}>

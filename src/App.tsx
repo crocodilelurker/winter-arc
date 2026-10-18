@@ -9,6 +9,7 @@ import { useDb } from './db/useDb'
 import Gate from './shell/Gate'
 import Menu from './shell/Menu'
 import ExportModal from './shell/ExportModal'
+import { usePwa } from './shell/usePwa'
 
 const NAV_ITEMS = [
   {
@@ -101,6 +102,7 @@ const FEATURE_TITLES: Record<string, string> = {
 
 export default function App() {
   const handle = useDb()
+  const pwa = usePwa()
   const [feature, setFeature] = useState<string | null>(() => {
     return sessionStorage.getItem('growth-arc:active-feature') || null
   })
@@ -128,7 +130,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [handle.db, handle.save])
 
-  if (!handle.db) return <Gate handle={handle} />
+  if (!handle.db) return <Gate handle={handle} pwa={pwa} />
 
   const db = handle.db
 
@@ -161,21 +163,78 @@ export default function App() {
         </nav>
 
         <div className="sidebar-bottom">
-          {/* Save Status */}
-          <div className={`save-status ${handle.isSaving ? 'is-saving' : handle.dirty ? 'is-dirty' : ''}`}>
-            <span className="save-status-dot" />
-            <span>
-              {handle.isSaving ? 'Saving...' : handle.dirty ? 'Unsaved changes' : 'Saved'}
-            </span>
+          {/* Save Status & Auto-Save Toggle */}
+          <div className={`save-status ${handle.isSaving ? 'is-saving' : handle.saveStatus === 'permission-needed' ? 'is-warn' : handle.dirty ? 'is-dirty' : ''}`}>
+            <div className="save-status-indicator">
+              <span className="save-status-dot" />
+              <span>
+                {handle.isSaving
+                  ? 'Saving to disk...'
+                  : handle.saveStatus === 'permission-needed'
+                  ? 'Permission needed'
+                  : handle.hasFileHandle
+                  ? handle.autoSave
+                    ? 'Auto-saved to disk'
+                    : handle.dirty
+                    ? 'Unsaved changes'
+                    : 'Saved'
+                  : handle.dirty
+                  ? 'Cached locally'
+                  : 'Session cached'}
+              </span>
+            </div>
+            <button
+              type="button"
+              className={`auto-save-pill ${handle.autoSave ? 'is-active' : 'is-inactive'}`}
+              onClick={() => handle.setAutoSave(!handle.autoSave)}
+              title={handle.autoSave ? 'Auto-save is ON (click to switch to manual)' : 'Auto-save is OFF (click to turn ON)'}
+            >
+              {handle.autoSave ? 'AUTO' : 'MANUAL'}
+            </button>
           </div>
-          {/* File Actions */}
+
+          {/* Link file to disk button if unlinked */}
+          {!handle.hasFileHandle && (
+            <button
+              type="button"
+              className="sidebar-action-btn link-btn"
+              onClick={() => void handle.linkDiskFile()}
+              title="Link a file on your disk so all changes auto-save directly to it"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                <polyline points="17 21 17 13 7 13 7 21" />
+                <polyline points="7 3 7 8 15 8" />
+              </svg>
+              <span>Link File to Disk</span>
+            </button>
+          )}
+
+          {/* Install PWA button if installable */}
+          {pwa.canInstall && (
+            <button
+              type="button"
+              className="sidebar-action-btn install-btn"
+              onClick={() => void pwa.installApp()}
+              title="Install Growth Arc to your device"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>Install App</span>
+            </button>
+          )}
+
+          {/* Manual Save / Save to file */}
           <button className="sidebar-nav-item" onClick={() => void handle.save()} disabled={handle.isSaving}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
               <polyline points="17 21 17 13 7 13 7 21" />
               <polyline points="7 3 7 8 15 8" />
             </svg>
-            {handle.hasFileHandle ? 'Save' : 'Save to file'}
+            {handle.hasFileHandle ? 'Save Now' : 'Save to file'}
           </button>
           <button className="sidebar-nav-item" onClick={() => setShowExport(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -211,6 +270,45 @@ export default function App() {
             <h1 className="app-topbar-title">{pageTitle}</h1>
           </div>
           <div className="app-topbar-right">
+            {handle.saveStatus === 'permission-needed' && (
+              <button
+                type="button"
+                className="sm danger pulse-btn"
+                onClick={() => void handle.grantDiskPermission()}
+                title="Click to grant disk write permission"
+              >
+                ⚠ Grant Disk Permission
+              </button>
+            )}
+            {!handle.hasFileHandle && handle.supportsFileSystemAccess && (
+              <button
+                type="button"
+                className="ghost sm"
+                onClick={() => void handle.linkDiskFile()}
+                title="Select or create a file on your disk so changes auto-save"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                </svg>
+                Link File to Auto-Save
+              </button>
+            )}
+            {pwa.canInstall && (
+              <button
+                type="button"
+                className="primary sm"
+                onClick={() => void pwa.installApp()}
+                title="Install Growth Arc as an app"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}>
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+                Install App
+              </button>
+            )}
             <button className="ghost sm" onClick={() => void handle.saveAs()} disabled={handle.isSaving}>
               Save as...
             </button>

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createDb, parseDb, saveFileName, serializeDb, type Db } from './types'
 
+export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'permission-needed' | 'unlinked'
+
 export type DbHandle = {
   db: Db | null
   dirty: boolean
@@ -8,6 +10,12 @@ export type DbHandle = {
   hasFileHandle: boolean
   isSaving: boolean
   supportsFileSystemAccess: boolean
+  autoSave: boolean
+  saveStatus: SaveStatus
+  lastSavedAt: Date | null
+  setAutoSave: (enabled: boolean) => void
+  linkDiskFile: () => Promise<boolean>
+  grantDiskPermission: () => Promise<boolean>
   /** Replaces the whole db. Marks the session unsaved. */
   update: (fn: (db: Db) => Db) => void
   start: (name: string) => void
@@ -26,6 +34,7 @@ const supportsFSA =
 const KEY_SESSION_DB = 'growth-arc:session-db'
 const KEY_SESSION_FILENAME = 'growth-arc:session-filename'
 const KEY_SESSION_DIRTY = 'growth-arc:session-dirty'
+const KEY_AUTO_SAVE = 'growth-arc:auto-save-enabled'
 
 function loadSavedSession(): { db: Db | null; fileName: string | null; dirty: boolean } {
   try {
@@ -124,15 +133,19 @@ async function verifyPermission(
   const options: FileSystemHandlePermissionDescriptor = {
     mode: readWrite ? 'readwrite' : 'read',
   }
-  if ('queryPermission' in fileHandle) {
-    if ((await fileHandle.queryPermission(options)) === 'granted') {
-      return true
+  try {
+    if ('queryPermission' in fileHandle) {
+      if ((await fileHandle.queryPermission(options)) === 'granted') {
+        return true
+      }
     }
-  }
-  if ('requestPermission' in fileHandle) {
-    if ((await fileHandle.requestPermission(options)) === 'granted') {
-      return true
+    if ('requestPermission' in fileHandle) {
+      if ((await fileHandle.requestPermission(options)) === 'granted') {
+        return true
+      }
     }
+  } catch (err) {
+    console.warn('Permission query/request failed:', err)
   }
   return false
 }
@@ -156,6 +169,22 @@ export function useDb(): DbHandle {
   const [fileHandle, setFileHandle] = useState<FileSystemFileHandle | null>(null)
   const [fileName, setFileName] = useState<string | null>(initial.fileName)
   const [isSaving, setIsSaving] = useState(false)
+  const [hasDiskPermission, setHasDiskPermission] = useState<boolean>(true)
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(() => (initial.db ? new Date() : null))
+
+  // Auto-save setting (persisted in localStorage, default true)
+  const [autoSave, setAutoSaveState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    const saved = localStorage.getItem(KEY_AUTO_SAVE)
+    return saved === null ? true : saved === 'true'
+  })
+
+  const setAutoSave = useCallback((enabled: boolean) => {
+    setAutoSaveState(enabled)
+    try {
+      localStorage.setItem(KEY_AUTO_SAVE, String(enabled))
+    } catch {}
+  }, [])
 
   const dbRef = useRef<Db | null>(db)
   dbRef.current = db
@@ -168,8 +197,18 @@ export function useDb(): DbHandle {
 
   // Try to restore file handle from IndexedDB on initial mount
   useEffect(() => {
-    void getHandleFromIdb().then((h) => {
-      if (h) setFileHandle(h)
+    void getHandleFromIdb().then(async (h) => {
+      if (h) {
+        setFileHandle(h)
+        try {
+          if ('queryPermission' in h) {
+            const status = await h.queryPermission({ mode: 'readwrite' })
+            setHasDiskPermission(status === 'granted')
+          }
+        } catch {
+          setHasDiskPermission(false)
+        }
+      }
     })
   }, [])
 
@@ -186,6 +225,42 @@ export function useDb(): DbHandle {
     return () => window.removeEventListener('beforeunload', warn)
   }, [dirty])
 
+  // Auto-Save debounced effect (1.2s debounce)
+  useEffect(() => {
+    if (!db || !dirty || !autoSave) return
+
+    // If no file handle, local-first safety is already secured by persistSession
+    if (!fileHandle) return
+
+    const timer = setTimeout(async () => {
+      const current = dbRef.current
+      const handle = fileHandleRef.current
+      if (!current || !handle) return
+
+      try {
+        setIsSaving(true)
+        const hasPerm = await verifyPermission(handle, true)
+        if (hasPerm) {
+          setHasDiskPermission(true)
+          const writable = await handle.createWritable()
+          await writable.write(serializeDb(current))
+          await writable.close()
+          setDirty(false)
+          setLastSavedAt(new Date())
+        } else {
+          setHasDiskPermission(false)
+        }
+      } catch (err) {
+        console.warn('Auto-save to disk failed:', err)
+        setHasDiskPermission(false)
+      } finally {
+        setIsSaving(false)
+      }
+    }, 1200)
+
+    return () => clearTimeout(timer)
+  }, [db, dirty, autoSave, fileHandle])
+
   const update = useCallback((fn: (db: Db) => Db) => {
     setDb((prev) => (prev ? fn(prev) : prev))
     setDirty(true)
@@ -196,6 +271,7 @@ export function useDb(): DbHandle {
     setFileHandle(null)
     setFileName(null)
     setDirty(false)
+    setLastSavedAt(new Date())
     void saveHandleToIdb(null)
   }, [])
 
@@ -205,6 +281,8 @@ export function useDb(): DbHandle {
     setFileHandle(handle ?? null)
     setFileName(handle ? handle.name : file.name)
     setDirty(false)
+    setHasDiskPermission(true)
+    setLastSavedAt(new Date())
     void saveHandleToIdb(handle ?? null)
   }, [])
 
@@ -228,6 +306,8 @@ export function useDb(): DbHandle {
       setFileHandle(handle)
       setFileName(handle.name)
       setDirty(false)
+      setHasDiskPermission(true)
+      setLastSavedAt(new Date())
       void saveHandleToIdb(handle)
       return true
     } catch (err: unknown) {
@@ -261,7 +341,9 @@ export function useDb(): DbHandle {
         await writable.close()
         setFileHandle(handle)
         setFileName(handle.name)
+        setHasDiskPermission(true)
         setDirty(false)
+        setLastSavedAt(new Date())
         void saveHandleToIdb(handle)
         return
       } catch (err: unknown) {
@@ -278,6 +360,7 @@ export function useDb(): DbHandle {
     const chosenName = fileNameRef.current || saveFileName(current)
     downloadAsBlob(current, chosenName)
     setDirty(false)
+    setLastSavedAt(new Date())
   }, [])
 
   const save = useCallback(async () => {
@@ -290,11 +373,15 @@ export function useDb(): DbHandle {
         setIsSaving(true)
         const hasPermission = await verifyPermission(handle, true)
         if (hasPermission) {
+          setHasDiskPermission(true)
           const writable = await handle.createWritable()
           await writable.write(serializeDb(current))
           await writable.close()
           setDirty(false)
+          setLastSavedAt(new Date())
           return
+        } else {
+          setHasDiskPermission(false)
         }
       } catch (err: unknown) {
         console.warn('Could not write directly to file handle, falling back to saveAs:', err)
@@ -307,14 +394,98 @@ export function useDb(): DbHandle {
     await saveAs()
   }, [saveAs])
 
+  const linkDiskFile = useCallback(async (): Promise<boolean> => {
+    const current = dbRef.current
+    if (!current) return false
+
+    if (!supportsFSA) {
+      const chosenName = fileNameRef.current || saveFileName(current)
+      downloadAsBlob(current, chosenName)
+      setDirty(false)
+      setLastSavedAt(new Date())
+      return true
+    }
+
+    try {
+      setIsSaving(true)
+      const handle = await window.showSaveFilePicker({
+        suggestedName: fileNameRef.current || saveFileName(current),
+        types: [
+          {
+            description: 'Growth Arc Save File',
+            accept: {
+              'application/json': ['.json'],
+            },
+          },
+        ],
+      })
+      const writable = await handle.createWritable()
+      await writable.write(serializeDb(current))
+      await writable.close()
+      setFileHandle(handle)
+      setFileName(handle.name)
+      setHasDiskPermission(true)
+      setDirty(false)
+      setLastSavedAt(new Date())
+      void saveHandleToIdb(handle)
+      return true
+    } catch (err: unknown) {
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        return false
+      }
+      console.warn('linkDiskFile failed:', err)
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }, [])
+
+  const grantDiskPermission = useCallback(async (): Promise<boolean> => {
+    const handle = fileHandleRef.current
+    if (!handle) return false
+    try {
+      const granted = await verifyPermission(handle, true)
+      setHasDiskPermission(granted)
+      if (granted && dbRef.current) {
+        setIsSaving(true)
+        const writable = await handle.createWritable()
+        await writable.write(serializeDb(dbRef.current))
+        await writable.close()
+        setDirty(false)
+        setLastSavedAt(new Date())
+      }
+      return granted
+    } catch (err) {
+      console.warn('grantDiskPermission failed:', err)
+      return false
+    } finally {
+      setIsSaving(false)
+    }
+  }, [])
+
   const close = useCallback(() => {
     setDb(null)
     setFileHandle(null)
     setFileName(null)
     setDirty(false)
+    setLastSavedAt(null)
     clearSavedSession()
     void saveHandleToIdb(null)
   }, [])
+
+  // Calculate comprehensive saveStatus
+  let saveStatus: SaveStatus = 'saved'
+  if (isSaving) {
+    saveStatus = 'saving'
+  } else if (!fileHandle) {
+    saveStatus = 'unlinked'
+  } else if (!hasDiskPermission) {
+    saveStatus = 'permission-needed'
+  } else if (dirty) {
+    saveStatus = 'dirty'
+  } else {
+    saveStatus = 'saved'
+  }
 
   return {
     db,
@@ -323,6 +494,12 @@ export function useDb(): DbHandle {
     hasFileHandle: fileHandle !== null,
     isSaving,
     supportsFileSystemAccess: supportsFSA,
+    autoSave,
+    saveStatus,
+    lastSavedAt,
+    setAutoSave,
+    linkDiskFile,
+    grantDiskPermission,
     update,
     start,
     open,

@@ -449,14 +449,29 @@ textarea { resize: vertical; min-height: 80px; }
   gap: 4px;
 }
 
-/* Save Status */
+/* Save Status & Auto-Save */
 .save-status {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 6px;
   font-size: 11px;
-  color: var(--text-3);
-  padding: 4px 8px;
+  color: var(--text-2);
+  padding: 6px 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  user-select: none;
+}
+
+.save-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .save-status-dot {
@@ -469,6 +484,92 @@ textarea { resize: vertical; min-height: 80px; }
 
 .save-status.is-saving .save-status-dot { background: var(--blue); animation: pulse 1s infinite; }
 .save-status.is-dirty .save-status-dot { background: var(--amber); }
+.save-status.is-warn .save-status-dot { background: var(--red); animation: pulse 1s infinite; }
+
+.auto-save-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.12s;
+  background: transparent;
+  color: var(--text-3);
+  letter-spacing: 0.02em;
+}
+
+.auto-save-pill.is-active {
+  background: rgba(62, 207, 142, 0.15);
+  color: var(--green);
+  border-color: rgba(62, 207, 142, 0.3);
+}
+
+.auto-save-pill.is-inactive {
+  background: rgba(140, 148, 160, 0.15);
+  color: var(--text-3);
+  border-color: var(--border);
+}
+
+.sidebar-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.sidebar-action-btn svg {
+  flex-shrink: 0;
+}
+
+.sidebar-action-btn:hover {
+  background: var(--hover);
+  color: var(--text);
+  border-color: var(--border-2);
+}
+
+.sidebar-action-btn.install-btn {
+  background: rgba(79, 130, 247, 0.12);
+  color: var(--blue);
+  border-color: rgba(79, 130, 247, 0.35);
+}
+
+.sidebar-action-btn.install-btn:hover {
+  background: rgba(79, 130, 247, 0.22);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+.sidebar-action-btn.link-btn {
+  background: rgba(62, 207, 142, 0.1);
+  color: var(--green);
+  border-color: rgba(62, 207, 142, 0.3);
+}
+
+.sidebar-action-btn.link-btn:hover {
+  background: rgba(62, 207, 142, 0.2);
+  border-color: var(--green);
+  color: #fff;
+}
+
+.pulse-btn {
+  animation: pulseBtn 1.5s infinite;
+}
+
+@keyframes pulseBtn {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(240, 70, 72, 0.4); }
+  50% { box-shadow: 0 0 0 5px rgba(240, 70, 72, 0); }
+}
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }
