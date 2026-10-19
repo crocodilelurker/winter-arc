@@ -118,8 +118,7 @@ export default function TaskDetails({
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (showSuggest && suggestedTasks.length > 0) {
-      if (e.key === ' ' || e.key === 'Escape') {
-        // Space or Escape dismisses autocomplete immediately so user can continue typing
+      if (e.key === 'Escape') {
         setShowSuggest(false)
         return
       }
@@ -133,7 +132,7 @@ export default function TaskDetails({
         setSelectedSuggestIdx((prev) => (prev - 1 + suggestedTasks.length) % suggestedTasks.length)
         return
       }
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' || e.key === 'Tab') {
         e.preventDefault()
         const target = suggestedTasks[selectedSuggestIdx]
         if (target) insertWikiLink(target)

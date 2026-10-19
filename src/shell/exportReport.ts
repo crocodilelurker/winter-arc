@@ -2,16 +2,23 @@ import type { Db } from '../db/types'
 import { getDayProgress as getNonNegotiablesProgress } from '../features/non-negotiables/data'
 
 export function getDateRange(startDate: string, endDate: string): string[] {
+  let [sY, sM, sD] = startDate.split('-').map(Number)
+  let [eY, eM, eD] = endDate.split('-').map(Number)
+
+  let cur = new Date(sY, sM - 1, sD)
+  let end = new Date(eY, eM - 1, eD)
+
+  if (cur > end) {
+    const tmp = cur
+    cur = end
+    end = tmp
+  }
+
   const dates: string[] = []
-  const [sY, sM, sD] = startDate.split('-').map(Number)
-  const [eY, eM, eD] = endDate.split('-').map(Number)
-
-  const cur = new Date(sY, sM - 1, sD)
-  const end = new Date(eY, eM - 1, eD)
-
   const pad = (n: number) => String(n).padStart(2, '0')
+  const MAX_DAYS = 730
 
-  while (cur <= end) {
+  while (cur <= end && dates.length < MAX_DAYS) {
     dates.push(`${cur.getFullYear()}-${pad(cur.getMonth() + 1)}-${pad(cur.getDate())}`)
     cur.setDate(cur.getDate() + 1)
   }
@@ -215,6 +222,13 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
   const taskRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
   const fulfillmentRate = totalDays > 0 ? Math.round((daysAllHabitsFulfilled / totalDays) * 100) : 0
 
+  const boards = db.features.board?.boards || []
+  const totalBoards = boards.length
+  const totalCanvasElements = boards.reduce(
+    (sum, b) => sum + (Array.isArray(b.elements) ? b.elements.length : 0),
+    0,
+  )
+
   const report = `# Growth Arc Progress Report
 
 **Name:** ${userName}  
@@ -236,6 +250,7 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
 | **Daily Expenses** | Total Spend | **${currency}${Math.round(totalExpenses * 100) / 100}** (${totalPurchases} items logged) |
 | | Necessary vs Discretionary | **${currency}${Math.round(necessaryExpenses * 100) / 100}** necessary · **${currency}${Math.round(unnecessaryExpenses * 100) / 100}** discretionary |
 | **Learnings & Creations** | Growth & Tangible Output | **${totalLearnings} learnings** · **${totalCreations} creations logged** |
+| **Visual Boards** | Canvases & Sketches | **${totalBoards} canvas${totalBoards === 1 ? '' : 'es'}** (${totalCanvasElements} elements drawn) |
 
 ---
 

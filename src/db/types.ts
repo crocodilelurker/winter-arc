@@ -33,6 +33,11 @@ import {
   createDayPlannerData,
   ensureDayPlannerData,
 } from '../features/day-planner/data'
+import {
+  type BoardData,
+  createBoardData,
+  ensureBoardData,
+} from '../features/board/data'
 
 export const DB_VERSION = 1
 
@@ -49,6 +54,7 @@ export type Db = {
     expenses: ExpensesData
     learnings: LearningData
     dayPlanner: DayPlannerData
+    board: BoardData
   }
 }
 
@@ -71,6 +77,7 @@ export function createDb(name: string): Db {
       expenses: createExpensesData(),
       learnings: createLearningData(),
       dayPlanner: createDayPlannerData(),
+      board: createBoardData(),
     },
   }
 }
@@ -119,6 +126,7 @@ export function parseDb(text: string): Db {
       expenses: ensureExpensesData(features.expenses),
       learnings: ensureLearningData(features.learnings),
       dayPlanner: ensureDayPlannerData(features.dayPlanner),
+      board: ensureBoardData(features.board),
     },
   }
 }

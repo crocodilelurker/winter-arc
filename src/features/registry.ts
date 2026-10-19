@@ -3,7 +3,7 @@
  * title, a blurb and whether it's built yet. Adding feature 2 means adding a
  * row here and a folder next door; nothing else in the shell changes.
  */
-export type FeatureId = 'calorie-counter' | 'todo-graph' | 'day-planner' | 'gym' | 'non-negotiables' | 'expenses' | 'learnings'
+export type FeatureId = 'calorie-counter' | 'todo-graph' | 'day-planner' | 'gym' | 'non-negotiables' | 'expenses' | 'learnings' | 'board'
 
 export type FeatureCard = {
   id: FeatureId | string
@@ -53,6 +53,12 @@ export const FEATURES: FeatureCard[] = [
     id: 'learnings',
     title: 'Learnings & Creations',
     blurb: 'Record what you learned today and what you created to track life progression.',
+    ready: true,
+  },
+  {
+    id: 'board',
+    title: 'Canvas Board',
+    blurb: 'Visual Excalidraw canvas for sketching, diagrams, and notes in dark mode.',
     ready: true,
   },
 ]

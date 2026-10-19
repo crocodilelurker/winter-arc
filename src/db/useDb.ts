@@ -21,8 +21,8 @@ export type DbHandle = {
   start: (name: string) => void
   open: (file: File, handle?: FileSystemFileHandle | null) => Promise<void>
   openWithPicker: () => Promise<boolean>
-  save: () => Promise<void>
-  saveAs: () => Promise<void>
+  save: () => Promise<boolean>
+  saveAs: () => Promise<boolean>
   close: () => void
 }
 
@@ -262,14 +262,23 @@ export function useDb(): DbHandle {
   }, [db, dirty, autoSave, fileHandle])
 
   const update = useCallback((fn: (db: Db) => Db) => {
-    setDb((prev) => (prev ? fn(prev) : prev))
+    setDb((prev) => {
+      if (!prev) return prev
+      const next = fn(prev)
+      dbRef.current = next
+      return next
+    })
     setDirty(true)
   }, [])
 
   const start = useCallback((name: string) => {
-    setDb(createDb(name))
+    const next = createDb(name)
+    setDb(next)
+    dbRef.current = next
     setFileHandle(null)
+    fileHandleRef.current = null
     setFileName(null)
+    fileNameRef.current = null
     setDirty(false)
     setLastSavedAt(new Date())
     void saveHandleToIdb(null)
@@ -277,9 +286,14 @@ export function useDb(): DbHandle {
 
   const open = useCallback(async (file: File, handle?: FileSystemFileHandle | null) => {
     const text = await file.text()
-    setDb(parseDb(text))
+    const parsed = parseDb(text)
+    setDb(parsed)
+    dbRef.current = parsed
     setFileHandle(handle ?? null)
-    setFileName(handle ? handle.name : file.name)
+    fileHandleRef.current = handle ?? null
+    const name = handle ? handle.name : file.name
+    setFileName(name)
+    fileNameRef.current = name
     setDirty(false)
     setHasDiskPermission(true)
     setLastSavedAt(new Date())
@@ -302,9 +316,13 @@ export function useDb(): DbHandle {
       })
       const file = await handle.getFile()
       const text = await file.text()
-      setDb(parseDb(text))
+      const parsed = parseDb(text)
+      setDb(parsed)
+      dbRef.current = parsed
       setFileHandle(handle)
+      fileHandleRef.current = handle
       setFileName(handle.name)
+      fileNameRef.current = handle.name
       setDirty(false)
       setHasDiskPermission(true)
       setLastSavedAt(new Date())
@@ -312,15 +330,18 @@ export function useDb(): DbHandle {
       return true
     } catch (err: unknown) {
       if (err instanceof DOMException && err.name === 'AbortError') {
-        return true
+        return false
       }
       throw err
     }
   }, [])
 
-  const saveAs = useCallback(async () => {
+  const saveAs = useCallback(async (): Promise<boolean> => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('growth-arc:flush-pending'))
+    }
     const current = dbRef.current
-    if (!current) return
+    if (!current) return false
 
     if (supportsFSA) {
       try {
@@ -340,15 +361,17 @@ export function useDb(): DbHandle {
         await writable.write(serializeDb(current))
         await writable.close()
         setFileHandle(handle)
+        fileHandleRef.current = handle
         setFileName(handle.name)
+        fileNameRef.current = handle.name
         setHasDiskPermission(true)
         setDirty(false)
         setLastSavedAt(new Date())
         void saveHandleToIdb(handle)
-        return
+        return true
       } catch (err: unknown) {
         if (err instanceof DOMException && err.name === 'AbortError') {
-          return
+          return false
         }
         console.warn('showSaveFilePicker failed, falling back to download:', err)
       } finally {
@@ -361,11 +384,15 @@ export function useDb(): DbHandle {
     downloadAsBlob(current, chosenName)
     setDirty(false)
     setLastSavedAt(new Date())
+    return true
   }, [])
 
-  const save = useCallback(async () => {
+  const save = useCallback(async (): Promise<boolean> => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('growth-arc:flush-pending'))
+    }
     const current = dbRef.current
-    if (!current) return
+    if (!current) return false
 
     const handle = fileHandleRef.current
     if (handle) {
@@ -379,7 +406,7 @@ export function useDb(): DbHandle {
           await writable.close()
           setDirty(false)
           setLastSavedAt(new Date())
-          return
+          return true
         } else {
           setHasDiskPermission(false)
         }
@@ -391,7 +418,7 @@ export function useDb(): DbHandle {
     }
 
     // If no existing handle or direct write failed, open Save As
-    await saveAs()
+    return await saveAs()
   }, [saveAs])
 
   const linkDiskFile = useCallback(async (): Promise<boolean> => {
@@ -423,7 +450,9 @@ export function useDb(): DbHandle {
       await writable.write(serializeDb(current))
       await writable.close()
       setFileHandle(handle)
+      fileHandleRef.current = handle
       setFileName(handle.name)
+      fileNameRef.current = handle.name
       setHasDiskPermission(true)
       setDirty(false)
       setLastSavedAt(new Date())

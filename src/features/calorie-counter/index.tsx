@@ -91,15 +91,18 @@ export default function CalorieCounter({ data, onChange }: Props) {
                 <span className="water-count">{day.water} / {data.goals.water} glasses</span>
               </div>
               <div className="water-glasses">
-                {Array.from({ length: Math.max(data.goals.water, day.water) }, (_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    className={`glass-btn ${i < day.water ? 'is-full' : ''}`}
-                    title={`${i + 1} glass${i > 0 ? 'es' : ''}`}
-                    onClick={() => onChange(setWater(data, selected, i < day.water ? i : i + 1))}
-                  />
-                ))}
+                {Array.from(
+                  { length: Math.min(30, Math.max(1, Math.max(Number(data.goals?.water) || 8, Number(day.water) || 0))) },
+                  (_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      className={`glass-btn ${i < day.water ? 'is-full' : ''}`}
+                      title={`${i + 1} glass${i > 0 ? 'es' : ''}`}
+                      onClick={() => onChange(setWater(data, selected, i < day.water ? i : i + 1))}
+                    />
+                  ),
+                )}
               </div>
               <div className="water-btns">
                 <button

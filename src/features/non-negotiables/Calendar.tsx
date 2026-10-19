@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   type Habit,
   type DayHabitsLog,
@@ -26,6 +26,13 @@ type Props = {
 export default function Calendar({ selectedDate, today, habits, history, onSelectDate }: Props) {
   const [y, m] = selectedDate.split('-').map(Number)
   const [cursor, setCursor] = useState({ year: y, month: m - 1 })
+
+  useEffect(() => {
+    const [sY, sM] = selectedDate.split('-').map(Number)
+    if (!isNaN(sY) && !isNaN(sM)) {
+      setCursor({ year: sY, month: sM - 1 })
+    }
+  }, [selectedDate])
 
   const first = new Date(cursor.year, cursor.month, 1)
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate()

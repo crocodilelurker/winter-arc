@@ -276,9 +276,10 @@ export function setWater(
   glasses: number,
 ): CalorieCounterData {
   const day = getDay(data, dateKey)
+  const safeGlasses = Math.min(100, Math.max(0, Math.round(Number(glasses) || 0)))
   return {
     ...data,
-    days: { ...data.days, [dateKey]: { ...day, water: Math.max(0, Math.round(glasses)) } },
+    days: { ...data.days, [dateKey]: { ...day, water: safeGlasses } },
   }
 }
 

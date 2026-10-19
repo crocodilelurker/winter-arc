@@ -627,6 +627,14 @@ textarea { resize: vertical; min-height: 80px; }
   width: 100%;
 }
 
+.app-content.app-content-board {
+  max-width: 100%;
+  padding: 16px 20px;
+  height: calc(100vh - 54px);
+  display: flex;
+  flex-direction: column;
+}
+
 /* Mobile navigation elements (hidden on desktop) */
 .app-mobile-header {
   display: none;
@@ -1280,6 +1288,11 @@ textarea { resize: vertical; min-height: 80px; }
 
   .app-content {
     padding: 14px 12px;
+  }
+
+  .app-content.app-content-board {
+    padding: 8px 8px;
+    height: calc(100dvh - 54px - 64px - var(--sab));
   }
 
   /* Mobile Top App Bar */

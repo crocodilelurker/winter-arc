@@ -120,7 +120,7 @@ export function getDayProgress(
   if (total === 0) {
     return { fulfilled: 0, total: 0, isAllFulfilled: false, percent: 0 }
   }
-  const fulfilled = habits.filter((h) => isHabitFulfilled(h, log?.values[h.id])).length
+  const fulfilled = habits.filter((h) => isHabitFulfilled(h, log?.values?.[h.id])).length
   const isAllFulfilled = fulfilled === total
   const percent = Math.round((fulfilled / total) * 100)
   return {
@@ -158,6 +158,7 @@ export function setBooleanHabit(
   completed: boolean,
 ): NonNegotiablesData {
   const dayLog = getOrCreateDayLog(data, dateStr)
+  const currentValues = dayLog.values || {}
   return {
     ...data,
     history: {
@@ -165,10 +166,10 @@ export function setBooleanHabit(
       [dateStr]: {
         ...dayLog,
         values: {
-          ...dayLog.values,
+          ...currentValues,
           [habitId]: {
-            ...dayLog.values[habitId],
-            completed,
+            ...currentValues[habitId],
+            completed: Boolean(completed),
           },
         },
       },
@@ -183,7 +184,8 @@ export function setNumberHabit(
   current: number,
 ): NonNegotiablesData {
   const dayLog = getOrCreateDayLog(data, dateStr)
-  const safeCurrent = Math.max(0, current)
+  const currentValues = dayLog.values || {}
+  const safeCurrent = Math.max(0, Number.isFinite(current) ? Math.round(current) : 0)
   return {
     ...data,
     history: {
@@ -191,9 +193,9 @@ export function setNumberHabit(
       [dateStr]: {
         ...dayLog,
         values: {
-          ...dayLog.values,
+          ...currentValues,
           [habitId]: {
-            ...dayLog.values[habitId],
+            ...currentValues[habitId],
             current: safeCurrent,
           },
         },
@@ -209,8 +211,9 @@ export function stepNumberHabit(
   delta: number,
 ): NonNegotiablesData {
   const dayLog = getOrCreateDayLog(data, dateStr)
-  const currentVal = dayLog.values[habitId]?.current ?? 0
-  return setNumberHabit(data, dateStr, habitId, currentVal + delta)
+  const currentVal = dayLog.values?.[habitId]?.current ?? 0
+  const safeDelta = Number.isFinite(delta) ? delta : 0
+  return setNumberHabit(data, dateStr, habitId, currentVal + safeDelta)
 }
 
 export function addHabit(

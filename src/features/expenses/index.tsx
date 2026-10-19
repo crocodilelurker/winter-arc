@@ -69,11 +69,7 @@ export default function Expenses({ data, onChange }: Props) {
     const pad = (n: number) => String(n).padStart(2, '0')
     const nextStr = `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}`
     setSelectedDate(nextStr)
-    // Synchronize month view if switched to different month
-    const newMonth = next.getMonth()
-    const newYear = next.getFullYear()
-    const diffInMonths = (newYear - selYear) * 12 + (newMonth - (selMonth - 1))
-    setViewMonthOffset(diffInMonths)
+    setViewMonthOffset(0)
   }
 
   const handleAddExpense = (e: React.FormEvent) => {

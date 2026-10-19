@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { DayWorkoutLog } from './data'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -20,6 +20,13 @@ type Props = {
 export default function Calendar({ selected, today, history, onSelect }: Props) {
   const [y, m] = selected.split('-').map(Number)
   const [cursor, setCursor] = useState({ year: y, month: m - 1 })
+
+  useEffect(() => {
+    const [sY, sM] = selected.split('-').map(Number)
+    if (!isNaN(sY) && !isNaN(sM)) {
+      setCursor({ year: sY, month: sM - 1 })
+    }
+  }, [selected])
 
   const first = new Date(cursor.year, cursor.month, 1)
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate()

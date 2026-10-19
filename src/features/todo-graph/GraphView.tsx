@@ -220,8 +220,10 @@ export default function GraphView({ tasks, selectedTaskId, onSelectTask }: Props
     const dpr = window.devicePixelRatio || 1
     const width = canvas.width / dpr
     const height = canvas.height / dpr
+    if (width <= 0 || height <= 0) return
 
     ctx.save()
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     ctx.clearRect(0, 0, width, height)
 
     // Deep Obsidian canvas background with subtle gradient
@@ -472,16 +474,13 @@ export default function GraphView({ tasks, selectedTaskId, onSelectTask }: Props
       const dpr = window.devicePixelRatio || 1
       const width = container.clientWidth
       const height = container.clientHeight
+      if (width <= 0 || height <= 0) return
 
       canvas.width = width * dpr
       canvas.height = height * dpr
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
 
-      const ctx = canvas.getContext('2d')
-      if (ctx) {
-        ctx.scale(dpr, dpr)
-      }
       draw()
     }
 
@@ -489,7 +488,13 @@ export default function GraphView({ tasks, selectedTaskId, onSelectTask }: Props
     const observer = new ResizeObserver(handleResize)
     if (containerRef.current) observer.observe(containerRef.current)
 
-    return () => observer.disconnect()
+    return () => {
+      observer.disconnect()
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current)
+        animFrameRef.current = null
+      }
+    }
   }, [draw])
 
   const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement>) => {

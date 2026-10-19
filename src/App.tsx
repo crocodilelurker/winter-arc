@@ -6,6 +6,7 @@ import NonNegotiables from './features/non-negotiables'
 import Expenses from './features/expenses'
 import Learnings from './features/learnings'
 import DayPlanner from './features/day-planner'
+import Board from './features/board'
 import { updateTimeBlock, type TimeBlock } from './features/day-planner/data'
 import { setBooleanHabit, setNumberHabit } from './features/non-negotiables/data'
 import { useDb } from './db/useDb'
@@ -103,6 +104,17 @@ const NAV_ITEMS = [
       </svg>
     ),
   },
+  {
+    id: 'board',
+    label: 'Board',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <path d="M8 12h8" />
+        <path d="M12 8v8" />
+      </svg>
+    ),
+  },
 ]
 
 const FEATURE_TITLES: Record<string, string> = {
@@ -113,6 +125,7 @@ const FEATURE_TITLES: Record<string, string> = {
   'non-negotiables': 'Daily Habits',
   'expenses': 'Daily Expenses',
   'learnings': 'Learnings & Creations',
+  'board': 'Canvas Board',
 }
 
 export default function App() {
@@ -168,7 +181,7 @@ export default function App() {
   const pageTitle = feature ? FEATURE_TITLES[feature] || feature : 'Dashboard'
 
   // Is a secondary feature active (one of those opened via 'More' on mobile)?
-  const isSecondaryActive = ['gym', 'non-negotiables', 'expenses', 'learnings'].includes(feature || '')
+  const isSecondaryActive = ['gym', 'non-negotiables', 'expenses', 'learnings', 'board'].includes(feature || '')
 
   const handleToggleTaskFromPlanner = (date: string, block: TimeBlock, forceCompleted?: boolean) => {
     handle.update((prev) => {
@@ -348,7 +361,12 @@ export default function App() {
           </button>
           <button
             className="sidebar-nav-item"
+            disabled={handle.isSaving}
             onClick={() => {
+              if (handle.isSaving) return
+              if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('growth-arc:flush-pending'))
+              }
               if (handle.dirty && !window.confirm('Unsaved changes. Close anyway?')) return
               sessionStorage.removeItem('growth-arc:active-feature')
               setFeature(null)
@@ -472,7 +490,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="app-content">
+        <div className={`app-content ${feature === 'board' ? 'app-content-board' : ''}`}>
           {feature === 'day-planner' ? (
             <DayPlanner
               data={db.features.dayPlanner}
@@ -509,11 +527,14 @@ export default function App() {
                   const plannerDays = { ...updatedPlanner.days }
 
                   for (const [dKey, nextDay] of Object.entries(nextDays)) {
-                    const prevDay = prevDays[dKey]
+                    if (!nextDay || !Array.isArray(nextDay.tasks)) continue
+                    const prevDay = prevDays?.[dKey]
+                    const prevDayTasks = Array.isArray(prevDay?.tasks) ? prevDay.tasks : []
                     for (const nextTask of nextDay.tasks) {
-                      const prevTask = prevDay?.tasks.find((t) => t.id === nextTask.id)
+                      const prevTask = prevDayTasks.find((t) => t.id === nextTask.id)
                       if (!prevTask || prevTask.completed !== nextTask.completed) {
                         for (const [pDate, schedule] of Object.entries(plannerDays)) {
+                          if (!schedule || !Array.isArray(schedule.blocks)) continue
                           let schedChanged = false
                           const newBlocks = schedule.blocks.map((b) => {
                             const titleMatch = b.title.trim().toLowerCase() === nextTask.title.trim().toLowerCase()
@@ -586,6 +607,16 @@ export default function App() {
                 handle.update((prev) => ({
                   ...prev,
                   features: { ...prev.features, learnings: next },
+                }))
+              }
+            />
+          ) : feature === 'board' ? (
+            <Board
+              data={db.features.board}
+              onChange={(next) =>
+                handle.update((prev) => ({
+                  ...prev,
+                  features: { ...prev.features, board: next },
                 }))
               }
             />
@@ -822,7 +853,12 @@ export default function App() {
                 <button
                   type="button"
                   className="mobile-drawer-btn danger"
+                  disabled={handle.isSaving}
                   onClick={() => {
+                    if (handle.isSaving) return
+                    if (typeof window !== 'undefined') {
+                      window.dispatchEvent(new CustomEvent('growth-arc:flush-pending'))
+                    }
                     if (handle.dirty && !window.confirm('Unsaved changes. Close anyway?')) return
                     sessionStorage.removeItem('growth-arc:active-feature')
                     setFeature(null)
