@@ -28,6 +28,11 @@ import {
   createLearningData,
   ensureLearningData,
 } from '../features/learnings/data'
+import {
+  type DayPlannerData,
+  createDayPlannerData,
+  ensureDayPlannerData,
+} from '../features/day-planner/data'
 
 export const DB_VERSION = 1
 
@@ -43,6 +48,7 @@ export type Db = {
     nonNegotiables: NonNegotiablesData
     expenses: ExpensesData
     learnings: LearningData
+    dayPlanner: DayPlannerData
   }
 }
 
@@ -64,6 +70,7 @@ export function createDb(name: string): Db {
       nonNegotiables: createNonNegotiablesData(),
       expenses: createExpensesData(),
       learnings: createLearningData(),
+      dayPlanner: createDayPlannerData(),
     },
   }
 }
@@ -111,6 +118,7 @@ export function parseDb(text: string): Db {
       nonNegotiables: ensureNonNegotiablesData(features.nonNegotiables),
       expenses: ensureExpensesData(features.expenses),
       learnings: ensureLearningData(features.learnings),
+      dayPlanner: ensureDayPlannerData(features.dayPlanner),
     },
   }
 }

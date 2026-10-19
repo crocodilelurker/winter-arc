@@ -5,6 +5,7 @@ import Gym from './features/gym'
 import NonNegotiables from './features/non-negotiables'
 import Expenses from './features/expenses'
 import Learnings from './features/learnings'
+import DayPlanner from './features/day-planner'
 import { useDb } from './db/useDb'
 import Gate from './shell/Gate'
 import Menu from './shell/Menu'
@@ -21,6 +22,16 @@ const NAV_ITEMS = [
         <rect x="14" y="3" width="7" height="7" />
         <rect x="14" y="14" width="7" height="7" />
         <rect x="3" y="14" width="7" height="7" />
+      </svg>
+    ),
+  },
+  {
+    id: 'day-planner',
+    label: 'Planner',
+    icon: (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
       </svg>
     ),
   },
@@ -92,6 +103,7 @@ const NAV_ITEMS = [
 ]
 
 const FEATURE_TITLES: Record<string, string> = {
+  'day-planner': '24h Day Planner',
   'calorie-counter': 'Nutrition',
   'todo-graph': 'Tasks & Graph',
   'gym': 'Workouts',
@@ -316,7 +328,19 @@ export default function App() {
         </div>
 
         <div className="app-content">
-          {feature === 'calorie-counter' ? (
+          {feature === 'day-planner' ? (
+            <DayPlanner
+              data={db.features.dayPlanner}
+              onChange={(next) =>
+                handle.update((prev) => ({
+                  ...prev,
+                  features: { ...prev.features, dayPlanner: next },
+                }))
+              }
+              tasksData={db.features.todoGraph}
+              habitsData={db.features.nonNegotiables}
+            />
+          ) : feature === 'calorie-counter' ? (
             <CalorieCounter
               data={db.features.calorieCounter}
               onChange={(next) =>

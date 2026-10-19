@@ -28,6 +28,18 @@ const TILES = [
     ),
   },
   {
+    id: 'day-planner',
+    name: 'Day Planner',
+    desc: '24-hour timeline with drag & drop tasks, habits, and grid snapping.',
+    color: '#06b6d4',
+    icon: (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+  },
+  {
     id: 'gym',
     name: 'Workouts',
     desc: '7-day splits, log sets, reps, weights, and rest timers.',

@@ -181,6 +181,27 @@ export function generateMarkdownReport(db: Db, startDate: string, endDate: strin
       daySections.push(lrnText)
     }
 
+    // 7. Day Planner Schedule
+    const planDay = db.features.dayPlanner?.days?.[dateStr]
+    if (planDay && planDay.blocks && planDay.blocks.length > 0) {
+      const formatTime = (min: number) => {
+        const h = String(Math.floor(min / 60) % 24).padStart(2, '0')
+        const m = String(min % 60).padStart(2, '0')
+        return `${h}:${m}`
+      }
+      let planText = `**Day Schedule (${planDay.blocks.length} time blocks):**\n`
+      planText += planDay.blocks
+        .sort((a, b) => a.startMinute - b.startMinute)
+        .map((b) => {
+          const start = formatTime(b.startMinute)
+          const end = formatTime(b.startMinute + b.durationMinutes)
+          const status = b.completed ? ' [✓ Done]' : ''
+          return `  - ${start} – ${end} (${b.durationMinutes}m) [${b.category}] **${b.title}**${status}`
+        })
+        .join('\n')
+      daySections.push(planText)
+    }
+
     if (daySections.length > 0) {
       dailyMarkdownSections.push(`${dayHeader}\n\n${daySections.join('\n\n')}`)
     } else {
