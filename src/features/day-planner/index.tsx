@@ -42,6 +42,8 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
   const today = useMemo(() => todayKey(), [])
   const [selectedDate, setSelectedDate] = useState<string>(today)
   const [panelTab, setPanelTab] = useState<'all' | 'tasks' | 'habits'>('all')
+  const [mobilePlannerTab, setMobilePlannerTab] = useState<'timeline' | 'items'>('timeline')
+  const [toastMsg, setToastMsg] = useState<string | null>(null)
 
   // Settings
   const snapMinutesStep = data.settings?.snapMinutes || 15
@@ -349,23 +351,76 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
     setQuickTitle('')
   }
 
-  // Double click empty grid slot to add 30-min block
-  const handleGridDoubleClick = (e: React.MouseEvent) => {
+  // Open add / edit modal
+  const handleOpenAddModal = (startMinute?: number) => {
+    let start = startMinute
+    if (start === undefined) {
+      start = selectedDate === today ? snapMinutes(currentMinutes, snapMinutesStep) : 540
+      if (schedule.blocks.length > 0) {
+        const latest = Math.max(...schedule.blocks.map((b) => b.startMinute + b.durationMinutes))
+        if (latest < 1440 - 60) {
+          start = snapMinutes(latest, snapMinutesStep)
+        }
+      }
+    }
+    setEditingBlock({
+      id: '__new__',
+      title: '',
+      category: 'custom',
+      color: CATEGORY_COLORS.custom,
+      startMinute: start,
+      durationMinutes: 60,
+    })
+  }
+
+  // 1-tap schedule from tasks / habits panel
+  const handleScheduleItem = (
+    title: string,
+    category: TimeBlockCategory,
+    sourceId?: string,
+    defaultDuration = 60,
+  ) => {
+    let nextStart = selectedDate === today ? snapMinutes(currentMinutes, snapMinutesStep) : 540
+    if (schedule.blocks.length > 0) {
+      const latest = Math.max(...schedule.blocks.map((b) => b.startMinute + b.durationMinutes))
+      if (latest < 1440 - defaultDuration) {
+        nextStart = snapMinutes(latest, snapMinutesStep)
+      }
+    }
+
+    const nextData = addTimeBlock(data, selectedDate, {
+      title,
+      category,
+      color: CATEGORY_COLORS[category],
+      startMinute: nextStart,
+      durationMinutes: defaultDuration,
+      sourceId,
+    })
+    onChange(nextData)
+    setMobilePlannerTab('timeline')
+    setToastMsg(`Scheduled "${title}" at ${formatMinutes(nextStart)}`)
+    setTimeout(() => setToastMsg(null), 3000)
+
+    if (timelineScrollRef.current) {
+      setTimeout(() => {
+        timelineScrollRef.current?.scrollTo({
+          top: Math.max(0, (nextStart / 60) * hourHeight - 120),
+          behavior: 'smooth',
+        })
+      }, 120)
+    }
+  }
+
+  // Click empty grid slot to add 30-min block
+  const handleGridClick = (e: React.MouseEvent) => {
     if (!gridRef.current) return
+    const target = e.target as HTMLElement
+    if (target.closest('.dp-block')) return // clicked block, let block click handle it
     const rect = gridRef.current.getBoundingClientRect()
-    const offsetY = e.clientY - rect.top
+    const offsetY = Math.max(0, Math.min(totalHeight, e.clientY - rect.top))
     const exactMin = (offsetY / totalHeight) * 1440
     const snapped = snapMinutes(exactMin, snapMinutesStep)
-
-    onChange(
-      addTimeBlock(data, selectedDate, {
-        title: 'New Time Block',
-        category: 'custom',
-        color: CATEGORY_COLORS.custom,
-        startMinute: snapped,
-        durationMinutes: 30,
-      }),
-    )
+    handleOpenAddModal(snapped)
   }
 
   return (
@@ -374,6 +429,13 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
       onPointerMove={resizing ? handlePointerMove : undefined}
       onPointerUp={resizing ? handlePointerUp : undefined}
     >
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="dp-toast">
+          <span>{toastMsg}</span>
+        </div>
+      )}
+
       {/* Header & Date Navigation */}
       <div className="dp-header">
         <div className="dp-date-nav">
@@ -458,17 +520,52 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
         </div>
       </div>
 
+      {/* Mobile Mode Switcher (Visible only on mobile phones) */}
+      <div className="dp-mobile-view-tabs">
+        <button
+          type="button"
+          className={`dp-mobile-view-tab ${mobilePlannerTab === 'timeline' ? 'is-active' : ''}`}
+          onClick={() => setMobilePlannerTab('timeline')}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>24h Timeline ({schedule.blocks.length})</span>
+        </button>
+        <button
+          type="button"
+          className={`dp-mobile-view-tab ${mobilePlannerTab === 'items' ? 'is-active' : ''}`}
+          onClick={() => setMobilePlannerTab('items')}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+          <span>Tasks & Habits ({dayTasks.length + dayHabits.length})</span>
+        </button>
+      </div>
+
       {/* Main Workspace */}
-      <div className="dp-workspace">
+      <div className={`dp-workspace mobile-${mobilePlannerTab}`}>
         {/* Left: 24-Hour Timeline */}
         <div className="dp-timeline-container">
           <div className="dp-timeline-toolbar">
-            <span>
-              <strong>24-Hour Schedule</strong> · {schedule.blocks.length} blocks planned
-            </span>
-            <span>
-              Tip: Drag from right panel · Stretch edges to resize (snaps to {snapMinutesStep}m)
-            </span>
+            <div className="dp-toolbar-left">
+              <span>
+                <strong>24-Hour Schedule</strong> · {schedule.blocks.length} blocks planned
+              </span>
+              <span className="dp-toolbar-tip">
+                Tip: Drag from right panel · Stretch edges to resize
+              </span>
+            </div>
+            <button
+              type="button"
+              className="primary sm dp-toolbar-add-btn"
+              onClick={() => handleOpenAddModal()}
+            >
+              + Add Block
+            </button>
           </div>
 
           <div className="dp-timeline-scroll" ref={timelineScrollRef}>
@@ -496,7 +593,7 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                 onDragOver={handleGridDragOver}
                 onDragLeave={handleGridDragLeave}
                 onDrop={handleGridDrop}
-                onDoubleClick={handleGridDoubleClick}
+                onClick={handleGridClick}
               >
                 {/* Horizontal Grid Lines */}
                 {Array.from({ length: 24 }, (_, hour) => {
@@ -666,6 +763,19 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
               </div>
             </div>
           </div>
+
+          {/* Mobile Floating Add Button */}
+          <button
+            type="button"
+            className="dp-floating-add-btn"
+            onClick={() => handleOpenAddModal()}
+            title="Add Time Block"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </button>
         </div>
 
         {/* Right Side Panel: Tasks & Non-Negotiables */}
@@ -681,7 +791,7 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
               </span>
             </div>
             <p className="dp-panel-hint">
-              Drag any task or habit into the 24h timeline to schedule it.
+              Drag into the timeline or tap Schedule to place on the 24h grid.
             </p>
 
             <div className="dp-panel-tabs">
@@ -726,7 +836,7 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                         handleDragStartFromPanel(e, task.title, 'task', task.id, 60)
                       }
                       className={`dp-item-card ${isScheduled ? 'is-scheduled' : ''}`}
-                      title="Drag into the timeline to schedule"
+                      title="Drag into the timeline or click Schedule"
                     >
                       <div className="dp-item-top">
                         <span className="dp-item-badge task">Task #{task.number}</span>
@@ -740,9 +850,22 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                         )}
                       </div>
                       <div className="dp-item-title">{task.title}</div>
-                      <div className="dp-item-sub">
-                        <span>{task.topic || 'General'}</span>
-                        <span>Drag to 24h Grid</span>
+                      <div className="dp-item-bottom">
+                        <div className="dp-item-sub">
+                          <span>{task.topic || 'General'}</span>
+                          <span className="dp-drag-hint">Drag to Grid</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="dp-schedule-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleScheduleItem(task.title, 'task', task.id, 60)
+                          }}
+                          title="Schedule into timeline"
+                        >
+                          + Schedule
+                        </button>
                       </div>
                     </div>
                   )
@@ -766,7 +889,7 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                         handleDragStartFromPanel(e, habit.name, 'non-negotiable', habit.id, 30)
                       }
                       className={`dp-item-card ${isScheduled ? 'is-scheduled' : ''}`}
-                      title="Drag into the timeline to schedule"
+                      title="Drag into the timeline or click Schedule"
                     >
                       <div className="dp-item-top">
                         <span className="dp-item-badge habit">Habit</span>
@@ -780,9 +903,22 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                         )}
                       </div>
                       <div className="dp-item-title">{habit.name}</div>
-                      <div className="dp-item-sub">
-                        <span>{habit.unit ? `Target: ${habit.target} ${habit.unit}` : 'Daily Routine'}</span>
-                        <span>Drag to 24h Grid</span>
+                      <div className="dp-item-bottom">
+                        <div className="dp-item-sub">
+                          <span>{habit.unit ? `Target: ${habit.target} ${habit.unit}` : 'Daily Routine'}</span>
+                          <span className="dp-drag-hint">Drag to Grid</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="dp-schedule-btn"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleScheduleItem(habit.name, 'non-negotiable', habit.id, 30)
+                          }}
+                          title="Schedule into timeline"
+                        >
+                          + Schedule
+                        </button>
                       </div>
                     </div>
                   )
@@ -933,16 +1069,20 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  className="ghost sm is-danger"
-                  onClick={() => {
-                    onChange(deleteTimeBlock(data, selectedDate, editingBlock.id))
-                    setEditingBlock(null)
-                  }}
-                >
-                  Delete Block
-                </button>
+                {editingBlock.id !== '__new__' ? (
+                  <button
+                    type="button"
+                    className="ghost sm is-danger"
+                    onClick={() => {
+                      onChange(deleteTimeBlock(data, selectedDate, editingBlock.id))
+                      setEditingBlock(null)
+                    }}
+                  >
+                    Delete Block
+                  </button>
+                ) : (
+                  <div />
+                )}
 
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button
@@ -956,19 +1096,32 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                     type="button"
                     className="primary sm"
                     onClick={() => {
-                      onChange(
-                        updateTimeBlock(data, selectedDate, editingBlock.id, {
-                          title: editingBlock.title.trim() || 'Untitled Block',
-                          startMinute: editingBlock.startMinute,
-                          durationMinutes: editingBlock.durationMinutes,
-                          color: editingBlock.color,
-                          notes: editingBlock.notes?.trim() || undefined,
-                        }),
-                      )
+                      if (editingBlock.id === '__new__') {
+                        onChange(
+                          addTimeBlock(data, selectedDate, {
+                            title: editingBlock.title.trim() || 'Untitled Block',
+                            category: editingBlock.category || 'custom',
+                            startMinute: editingBlock.startMinute,
+                            durationMinutes: editingBlock.durationMinutes,
+                            color: editingBlock.color,
+                            notes: editingBlock.notes?.trim() || undefined,
+                          }),
+                        )
+                      } else {
+                        onChange(
+                          updateTimeBlock(data, selectedDate, editingBlock.id, {
+                            title: editingBlock.title.trim() || 'Untitled Block',
+                            startMinute: editingBlock.startMinute,
+                            durationMinutes: editingBlock.durationMinutes,
+                            color: editingBlock.color,
+                            notes: editingBlock.notes?.trim() || undefined,
+                          }),
+                        )
+                      }
                       setEditingBlock(null)
                     }}
                   >
-                    Save Changes
+                    {editingBlock.id === '__new__' ? 'Add Block' : 'Save Changes'}
                   </button>
                 </div>
               </div>

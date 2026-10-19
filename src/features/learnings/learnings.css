@@ -682,3 +682,37 @@
   border: 1px solid var(--border);
   white-space: pre-wrap;
 }
+
+/* ============================================================
+   Learnings Mobile Responsive Layout (max-width: 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .learnings-app {
+    gap: 12px;
+  }
+
+  .lrn-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .lrn-grid-layout {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .lrn-entry-card {
+    padding: 16px 14px;
+  }
+
+  .lrn-type-toggle {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .type-toggle-btn {
+    padding: 10px 12px !important;
+  }
+}

@@ -520,3 +520,36 @@
 }
 .library-item:hover .lib-del { opacity: 1; }
 .lib-del:hover { background: var(--red-dim); color: var(--red); border-color: transparent; }
+
+/* ============================================================
+   Calorie Counter Mobile Responsive Layout (max-width: 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .cc {
+    gap: 12px;
+  }
+
+  .cc-summary-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .cc-summary-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .macro-bars {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+
+  .food-modal {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
+  }
+}

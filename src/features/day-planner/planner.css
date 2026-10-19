@@ -723,13 +723,228 @@
   transform: scale(1.15);
 }
 
-/* Responsive adjustments */
-@media (max-width: 860px) {
+/* Mobile and Responsive Elements */
+.dp-mobile-view-tabs {
+  display: none;
+}
+
+.dp-floating-add-btn {
+  display: none;
+}
+
+.dp-item-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.dp-schedule-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--blue-dim);
+  border: 1px solid var(--blue-border);
+  color: var(--blue);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.dp-schedule-btn:hover {
+  background: var(--blue);
+  color: #fff;
+}
+
+.dp-toast {
+  position: fixed;
+  bottom: calc(76px + var(--sab));
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-2);
+  border: 1px solid var(--blue-border);
+  color: var(--text);
+  padding: 8px 16px;
+  border-radius: var(--r-full);
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: var(--sh-md);
+  z-index: 100;
+  animation: fadeUp 0.15s ease;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Dedicated Mobile Responsive Day Planner (max-width: 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .dp-root {
+    padding: 0;
+    gap: 10px;
+    height: auto;
+  }
+
+  .dp-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  .dp-date-nav {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .dp-header-actions {
+    justify-content: space-between;
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  /* Segmented Mobile View Tabs */
+  .dp-mobile-view-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    padding: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+  }
+
+  .dp-mobile-view-tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    background: transparent;
+    border: none;
+    border-radius: var(--r);
+    color: var(--text-2);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+
+  .dp-mobile-view-tab.is-active {
+    background: var(--blue);
+    color: #fff;
+    box-shadow: var(--sh-sm);
+  }
+
+  /* Workspace Layout on Mobile */
   .dp-workspace {
     flex-direction: column;
+    height: calc(100dvh - 190px);
+    position: relative;
+    border-radius: var(--r-lg);
   }
-  .dp-side-panel {
-    width: 100%;
-    max-height: 240px;
+
+  .dp-workspace.mobile-timeline .dp-timeline-container {
+    display: flex !important;
+    width: 100% !important;
+    flex: 1;
+    height: 100%;
+  }
+
+  .dp-workspace.mobile-timeline .dp-side-panel {
+    display: none !important;
+  }
+
+  .dp-workspace.mobile-items .dp-timeline-container {
+    display: none !important;
+  }
+
+  .dp-workspace.mobile-items .dp-side-panel {
+    display: flex !important;
+    width: 100% !important;
+    flex: 1;
+    max-height: none !important;
+    height: 100%;
+  }
+
+  /* Timeline Ruler compact on mobile */
+  .dp-ruler {
+    width: 48px;
+  }
+
+  .dp-hour-label {
+    font-size: 10px;
+    padding-right: 6px;
+  }
+
+  .dp-grid {
+    left: 48px;
+    right: 4px;
+  }
+
+  .dp-timeline-toolbar {
+    padding: 8px 12px;
+    font-size: 11px;
+  }
+
+  .dp-toolbar-tip {
+    display: none;
+  }
+
+  /* Stretch Handles with generous touch target */
+  .dp-stretch-handle {
+    height: 16px;
+    touch-action: none;
+  }
+
+  .dp-stretch-handle::before {
+    content: '';
+    position: absolute;
+    inset: -6px 0;
+  }
+
+  .dp-stretch-grip {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.45);
+  }
+
+  /* Mobile Floating Add Button */
+  .dp-floating-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    box-shadow: 0 4px 18px rgba(79, 130, 247, 0.55);
+    z-index: 35;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: transform 0.12s;
+  }
+
+  .dp-floating-add-btn:active {
+    transform: scale(0.92);
+  }
+
+  /* Edit Modal on Mobile */
+  .dp-modal-card {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
+    padding: 20px 16px;
   }
 }

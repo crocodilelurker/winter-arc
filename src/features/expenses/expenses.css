@@ -1024,3 +1024,87 @@
   color: #fff;
   border-color: var(--blue);
 }
+
+/* ============================================================
+   Expenses Mobile Responsive Layout (max-width: 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .expenses-app {
+    gap: 12px;
+  }
+
+  .monthly-expenses-banner {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .month-nav {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  /* 2x2 Stat Cards Grid on Mobile */
+  .month-top-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .month-stat-box {
+    padding: 10px 12px;
+  }
+
+  .month-stat-box .stat-label {
+    font-size: 11px;
+  }
+
+  .month-stat-box .stat-value {
+    font-size: 16px;
+  }
+
+  /* 3 Questions Form on Mobile */
+  .exp-entry-card {
+    padding: 16px 14px;
+  }
+
+  .exp-questions-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .necessity-toggle-group {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .necessity-btn {
+    padding: 12px 10px !important;
+  }
+
+  /* Category Filter Pills on Mobile */
+  .exp-filter-pills {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+  }
+
+  .exp-filter-pills button {
+    flex-shrink: 0;
+  }
+
+  /* Transaction Items on Mobile */
+  .exp-item {
+    padding: 10px 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .exp-item-right {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+}

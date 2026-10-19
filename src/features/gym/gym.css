@@ -783,3 +783,107 @@
   display: flex;
   gap: 8px;
 }
+
+/* ============================================================
+   Gym Mobile Responsive Layout (max-width: 768px)
+   ============================================================ */
+@media (max-width: 768px) {
+  .gym-app {
+    gap: 12px;
+  }
+
+  .gym-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .gym-preset-group {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .gym-preset-select {
+    flex: 1;
+    max-width: none;
+  }
+
+  .gym-topbar-actions {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  /* Week Strip on Mobile */
+  .gym-week-strip {
+    display: flex;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .gym-week-day {
+    flex: 1;
+    min-width: 44px;
+    padding: 6px 2px;
+  }
+
+  /* Session card */
+  .gym-session-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px;
+  }
+
+  .gym-session-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .gym-session-stats {
+    padding: 8px 14px;
+    gap: 12px;
+  }
+
+  /* Sets Table on Mobile */
+  .sets-table {
+    padding: 0 10px 8px;
+  }
+
+  .sets-head {
+    grid-template-columns: 28px 1fr 1fr 38px 26px;
+    gap: 5px;
+  }
+
+  .set-row {
+    grid-template-columns: 28px 1fr 1fr 38px 26px;
+    gap: 5px;
+    padding: 6px 0;
+  }
+
+  .set-input {
+    font-size: 14px;
+    padding: 6px 4px;
+  }
+
+  .set-check {
+    width: 38px;
+    height: 38px;
+  }
+
+  /* Exercise Card Head */
+  .exercise-card-head {
+    padding: 10px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Preset Editor Modal on Mobile */
+  .preset-modal {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
+  }
+}
