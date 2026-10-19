@@ -202,40 +202,45 @@ export function suggestFoods(data: CalorieCounterData, query: string, limit = 6)
     .slice(0, limit)
 }
 
-// --- operations (each returns a new CalorieCounterData) --------------------
-
-type NewEntry = Macros & { name: string; quantity: string; meal: MealId }
+export type NewEntry = Macros & { name: string; quantity: string; meal: MealId }
 
 /**
  * Logs a food on a day and upserts it into the library. The library keeps
- * exactly one row per normalized name: logging "litti choka" again overwrites
- * that single row's quantity and macros rather than adding a second copy.
+ * exactly one row per normalized name storing only its per-unit macros (no quantity).
  */
 export function addEntry(
   data: CalorieCounterData,
   dateKey: string,
   entry: NewEntry,
+  perUnitMacros?: Macros,
 ): CalorieCounterData {
   const typed = entry.name.trim().replace(/\s+/g, ' ')
   if (!typed) return data
 
   const key = normalizeName(typed)
   const existing = data.library.find((item) => item.key === key)
-  // A food keeps the spelling it was first saved with, so logging "litti choka"
-  // again doesn't rewrite the saved row to whatever casing was typed today.
   const name = existing?.name ?? typed
 
   const day = getDay(data, dateKey)
   const stored: FoodEntry = { ...entry, name, id: newId() }
 
+  // Strictly calculate per-unit macros
+  const qty = Math.max(1, parseInt(entry.quantity, 10) || 1)
+  const perUnit: Macros = perUnitMacros || {
+    protein: Math.round((entry.protein / qty) * 10) / 10,
+    carbs: Math.round((entry.carbs / qty) * 10) / 10,
+    fat: Math.round((entry.fat / qty) * 10) / 10,
+    calories: Math.round(entry.calories / qty),
+  }
+
   const row: LibraryItem = {
     key,
     name,
-    quantity: entry.quantity,
-    calories: entry.calories,
-    protein: entry.protein,
-    carbs: entry.carbs,
-    fat: entry.fat,
+    quantity: '', // Do NOT save quantity in saved foods! Only per-unit macros
+    calories: perUnit.calories,
+    protein: perUnit.protein,
+    carbs: perUnit.carbs,
+    fat: perUnit.fat,
     uses: (existing?.uses ?? 0) + 1,
     lastUsed: dateKey,
   }
@@ -284,6 +289,11 @@ export function setGoals(data: CalorieCounterData, goals: Goals): CalorieCounter
 export function forgetFood(data: CalorieCounterData, key: string): CalorieCounterData {
   return { ...data, library: data.library.filter((item) => item.key !== key) }
 }
+
+export function clearLibrary(data: CalorieCounterData): CalorieCounterData {
+  return { ...data, library: [] }
+}
+
 
 /** Local calendar date as YYYY-MM-DD. Kept here so this feature stays standalone. */
 export function dateKey(d = new Date()): string {

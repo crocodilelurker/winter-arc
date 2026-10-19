@@ -5,6 +5,7 @@ import './calorie-counter.css'
 import {
   MEALS,
   addEntry,
+  clearLibrary,
   dateKey,
   dayTotals,
   forgetFood,
@@ -17,12 +18,14 @@ import {
   setWater,
   type CalorieCounterData,
   type Goals,
+  type LibraryItem,
 } from './data'
 
 type Props = {
   data: CalorieCounterData
   onChange: (next: CalorieCounterData) => void
 }
+
 
 const round = (n: number) => Math.round(n * 10) / 10
 
@@ -31,6 +34,7 @@ export default function CalorieCounter({ data, onChange }: Props) {
   const [selected, setSelected] = useState(today)
   const [showGoals, setShowGoals] = useState(false)
   const [showLibrary, setShowLibrary] = useState(false)
+  const [prefillItem, setPrefillItem] = useState<LibraryItem | null>(null)
 
   const day = getDay(data, selected)
   const totals = dayTotals(day)
@@ -130,9 +134,17 @@ export default function CalorieCounter({ data, onChange }: Props) {
           <h3>Log Food</h3>
         </div>
         <div className="cc-food-form-body">
-          <FoodForm data={data} onAdd={(food) => onChange(addEntry(data, selected, food))} />
+          <FoodForm
+            data={data}
+            prefillItem={prefillItem}
+            onAdd={(food) => {
+              onChange(addEntry(data, selected, food, food.perUnit))
+              setPrefillItem(null)
+            }}
+          />
         </div>
       </div>
+
 
       {/* Meals */}
       <div className="meals-grid">
@@ -205,29 +217,57 @@ export default function CalorieCounter({ data, onChange }: Props) {
             <div className="cc-panel-body">
               {data.library.length === 0 ? (
                 <div className="meal-empty" style={{ padding: '16px' }}>
-                  Foods you log will be saved here. Type a name to reuse them quickly.
+                  Foods you log will be saved here per unit. Tap or type a name to reuse them quickly.
                 </div>
               ) : (
-                <div className="library-list">
-                  {[...data.library]
-                    .sort((a, b) => b.uses - a.uses || a.name.localeCompare(b.name))
-                    .map((item) => (
-                      <div key={item.key} className="library-item">
-                        <div>
-                          <div className="lib-name">{item.name}{item.quantity && <span className="lib-meta"> · {item.quantity}</span>}</div>
-                          <div className="lib-meta">{item.calories} kcal · P{round(item.protein)} C{round(item.carbs)} F{round(item.fat)} · {item.uses}× used</div>
-                        </div>
-                        <button
-                          type="button"
-                          className="lib-del"
-                          aria-label={`Forget ${item.name}`}
-                          onClick={() => onChange(forgetFood(data, item.key))}
+                <>
+                  <div className="lib-header-bar">
+                    <span className="lib-hint-text">Tap food to log again &amp; scale quantity</span>
+                    <button
+                      type="button"
+                      className="lib-clear-btn"
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to completely clear all saved foods?')) {
+                          onChange(clearLibrary(data))
+                        }
+                      }}
+                      title="Completely clear all saved foods"
+                    >
+                      Clear All Foods
+                    </button>
+                  </div>
+                  <div className="library-list">
+                    {[...data.library]
+                      .sort((a, b) => b.uses - a.uses || a.name.localeCompare(b.name))
+                      .map((item) => (
+                        <div
+                          key={item.key}
+                          className="library-item"
+                          onClick={() => setPrefillItem(item)}
+                          title="Click to prefill and log again"
                         >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                </div>
+                          <div>
+                            <div className="lib-name">{item.name}</div>
+                            <div className="lib-meta">
+                              {item.calories} kcal · P{round(item.protein)} C{round(item.carbs)} F{round(item.fat)} (per unit) · {item.uses}× used
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            className="lib-del"
+                            aria-label={`Delete ${item.name}`}
+                            title={`Delete ${item.name}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onChange(forgetFood(data, item.key))
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                </>
               )}
             </div>
           )}

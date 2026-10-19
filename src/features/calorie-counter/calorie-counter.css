@@ -482,6 +482,38 @@
   color: var(--text-2);
 }
 
+.lib-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 8px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border-2);
+}
+
+.lib-hint-text {
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.lib-clear-btn {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 8px;
+  height: auto;
+  color: var(--red);
+  background: var(--red-dim);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lib-clear-btn:hover {
+  background: var(--red);
+  color: #fff;
+}
+
 .library-list {
   display: flex;
   flex-direction: column;
@@ -490,36 +522,43 @@
 
 .library-item {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto;
   gap: 8px;
   align-items: center;
-  padding: 7px 8px;
+  padding: 8px 10px;
   border-radius: var(--r-sm);
   border: 1px solid transparent;
+  cursor: pointer;
   transition: all 0.1s;
 }
 
 .library-item:hover { background: var(--hover); border-color: var(--border); }
 
 .lib-name { font-size: 12px; font-weight: 500; color: var(--text); }
-.lib-meta { font-size: 11px; color: var(--text-3); }
+.lib-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 .lib-del {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border-radius: var(--r-sm);
   background: transparent;
-  border: none;
+  border: 1px solid var(--border-2);
   color: var(--text-3);
-  font-size: 13px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: all 0.1s;
+  opacity: 0.8;
+  cursor: pointer;
+  transition: all 0.15s;
 }
-.library-item:hover .lib-del { opacity: 1; }
-.lib-del:hover { background: var(--red-dim); color: var(--red); border-color: transparent; }
+.library-item:hover .lib-del, .lib-del:hover {
+  opacity: 1;
+  background: var(--red-dim);
+  color: var(--red);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
 
 /* ============================================================
    Calorie Counter Mobile Responsive Layout (max-width: 768px)

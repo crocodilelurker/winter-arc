@@ -1,10 +1,11 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   MEALS,
   caloriesFromMacros,
   suggestFoods,
   type CalorieCounterData,
   type LibraryItem,
+  type Macros,
   type MealId,
 } from './data'
 
@@ -21,21 +22,32 @@ export type SubmittedFood = {
   protein: number
   carbs: number
   fat: number
+  perUnit?: Macros
 }
 
 type Props = {
   data: CalorieCounterData
   onAdd: (food: SubmittedFood) => void
+  prefillItem?: LibraryItem | null
 }
 
-const blank = { name: '', quantity: '', protein: '', carbs: '', fat: '', calories: '' }
+const blank = { name: '', quantity: '1', protein: '', carbs: '', fat: '', calories: '' }
 
-export default function FoodForm({ data, onAdd }: Props) {
+export default function FoodForm({ data, onAdd, prefillItem }: Props) {
   const [meal, setMeal] = useState<MealId>('breakfast')
   const [form, setForm] = useState(blank)
+  const [basePerUnit, setBasePerUnit] = useState<Macros>({ protein: 0, carbs: 0, fat: 0, calories: 0 })
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const nameInput = useRef<HTMLInputElement>(null)
+
+  // Listen to prefillItem from parent
+  useEffect(() => {
+    if (prefillItem) {
+      pick(prefillItem)
+      nameInput.current?.focus()
+    }
+  }, [prefillItem])
 
   const suggestions = useMemo(
     () => (open ? suggestFoods(data, form.name) : []),
@@ -49,19 +61,84 @@ export default function FoodForm({ data, onAdd }: Props) {
   }
   const autoCalories = caloriesFromMacros(macros)
 
-  const set = (patch: Partial<typeof blank>) => setForm((f) => ({ ...f, ...patch }))
-
   function pick(item: LibraryItem) {
+    const perUnit: Macros = {
+      protein: item.protein ?? 0,
+      carbs: item.carbs ?? 0,
+      fat: item.fat ?? 0,
+      calories: item.calories ?? caloriesFromMacros(item),
+    }
+    setBasePerUnit(perUnit)
     setForm({
       name: item.name,
-      quantity: item.quantity,
-      protein: item.protein ? String(item.protein) : '',
-      carbs: item.carbs ? String(item.carbs) : '',
-      fat: item.fat ? String(item.fat) : '',
-      calories: item.calories ? String(item.calories) : '',
+      quantity: '1',
+      protein: perUnit.protein ? String(perUnit.protein) : '',
+      carbs: perUnit.carbs ? String(perUnit.carbs) : '',
+      fat: perUnit.fat ? String(perUnit.fat) : '',
+      calories: perUnit.calories ? String(perUnit.calories) : '',
     })
     setOpen(false)
     setActive(-1)
+  }
+
+  function handleQuantityChange(valStr: string) {
+    // Strictly integer only: strip any non-digit
+    const sanitized = valStr.replace(/[^0-9]/g, '')
+    const normalized = sanitized.replace(/^0+(?=[1-9])/, '')
+
+    setForm((prev) => {
+      if (!normalized) {
+        return { ...prev, quantity: '' }
+      }
+      const q = parseInt(normalized, 10)
+      if (isNaN(q) || q <= 0) {
+        return { ...prev, quantity: normalized }
+      }
+
+      // Dynamically scale macros based on per-unit values: macros per unit * quantity
+      const nextPro = basePerUnit.protein > 0 ? String(Math.round(basePerUnit.protein * q * 10) / 10) : prev.protein
+      const nextCarb = basePerUnit.carbs > 0 ? String(Math.round(basePerUnit.carbs * q * 10) / 10) : prev.carbs
+      const nextFat = basePerUnit.fat > 0 ? String(Math.round(basePerUnit.fat * q * 10) / 10) : prev.fat
+      const nextCal = basePerUnit.calories > 0 ? String(Math.round(basePerUnit.calories * q)) : prev.calories
+
+      return {
+        ...prev,
+        quantity: normalized,
+        protein: nextPro,
+        carbs: nextCarb,
+        fat: nextFat,
+        calories: nextCal,
+      }
+    })
+  }
+
+  function handleQuantityBlur() {
+    if (!form.quantity || parseInt(form.quantity, 10) < 1) {
+      handleQuantityChange('1')
+    }
+  }
+
+  function handleMacroChange(key: 'protein' | 'carbs' | 'fat' | 'calories', val: string) {
+    setForm((prev) => ({ ...prev, [key]: val }))
+    const qty = Math.max(1, parseInt(form.quantity, 10) || 1)
+    const numVal = toNum(val)
+    if (key === 'calories') {
+      setBasePerUnit((prev) => ({
+        ...prev,
+        calories: Math.round(numVal / qty),
+      }))
+    } else {
+      setBasePerUnit((prev) => {
+        const next = {
+          ...prev,
+          [key]: Math.round((numVal / qty) * 10) / 10,
+        }
+        if (!form.calories) {
+          next.calories = caloriesFromMacros(next)
+        }
+        return next
+      })
+    }
   }
 
   function onNameKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -85,9 +162,28 @@ export default function FoodForm({ data, onAdd }: Props) {
     e.preventDefault()
     const name = form.name.trim()
     if (!name) { nameInput.current?.focus(); return }
+    const qtyNum = Math.max(1, parseInt(form.quantity, 10) || 1)
     const typed = toNum(form.calories)
-    onAdd({ name, quantity: form.quantity.trim(), meal, ...macros, calories: typed || autoCalories })
+    const totalCalories = typed || autoCalories
+
+    const perUnit: Macros = {
+      protein: basePerUnit.protein > 0 ? basePerUnit.protein : Math.round((macros.protein / qtyNum) * 10) / 10,
+      carbs: basePerUnit.carbs > 0 ? basePerUnit.carbs : Math.round((macros.carbs / qtyNum) * 10) / 10,
+      fat: basePerUnit.fat > 0 ? basePerUnit.fat : Math.round((macros.fat / qtyNum) * 10) / 10,
+      calories: basePerUnit.calories > 0 ? basePerUnit.calories : Math.round(totalCalories / qtyNum),
+    }
+
+    onAdd({
+      name,
+      quantity: String(qtyNum),
+      meal,
+      ...macros,
+      calories: totalCalories,
+      perUnit,
+    })
+
     setForm(blank)
+    setBasePerUnit({ protein: 0, carbs: 0, fat: 0, calories: 0 })
     setOpen(false)
     setActive(-1)
     nameInput.current?.focus()
@@ -116,11 +212,16 @@ export default function FoodForm({ data, onAdd }: Props) {
           <input
             ref={nameInput}
             value={form.name}
-            onChange={(e) => { set({ name: e.target.value }); setOpen(true); setActive(-1) }}
+            onChange={(e) => {
+              const val = e.target.value
+              setForm((f) => ({ ...f, name: val }))
+              setOpen(true)
+              setActive(-1)
+            }}
             onFocus={() => setOpen(true)}
-            onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+            onBlur={() => window.setTimeout(() => setOpen(false), 140)}
             onKeyDown={onNameKeyDown}
-            placeholder="e.g. Chicken breast, Roti"
+            placeholder="e.g. Rice, Chicken breast, Roti"
             autoComplete="off"
           />
           {suggestions.length > 0 && (
@@ -135,7 +236,7 @@ export default function FoodForm({ data, onAdd }: Props) {
                   >
                     <span className="ff-sug-name">{item.name}</span>
                     <span className="ff-sug-meta">
-                      {item.quantity && `${item.quantity} · `}{item.calories} kcal · P{item.protein} C{item.carbs} F{item.fat}
+                      {item.calories} kcal · P{item.protein} C{item.carbs} F{item.fat} (per unit)
                     </span>
                   </button>
                 </li>
@@ -144,11 +245,20 @@ export default function FoodForm({ data, onAdd }: Props) {
           )}
         </div>
         <div className="ff-field">
-          <label className="ff-label">Quantity</label>
+          <label className="ff-label">Quantity (Units / Servings)</label>
           <input
+            type="number"
+            min="1"
+            step="1"
             value={form.quantity}
-            onChange={(e) => set({ quantity: e.target.value })}
-            placeholder="e.g. 2 pieces"
+            onChange={(e) => handleQuantityChange(e.target.value)}
+            onBlur={handleQuantityBlur}
+            onKeyDown={(e) => {
+              if (['.', ',', '-', '+', 'e', 'E'].includes(e.key)) {
+                e.preventDefault()
+              }
+            }}
+            placeholder="1"
             autoComplete="off"
           />
         </div>
@@ -164,7 +274,7 @@ export default function FoodForm({ data, onAdd }: Props) {
               min="0"
               step="any"
               value={form[key]}
-              onChange={(e) => set({ [key]: e.target.value })}
+              onChange={(e) => handleMacroChange(key, e.target.value)}
               placeholder={key === 'calories' && autoCalories ? String(autoCalories) : '0'}
             />
           </div>
@@ -175,7 +285,12 @@ export default function FoodForm({ data, onAdd }: Props) {
       </div>
 
       {!form.calories && autoCalories > 0 && (
-        <p className="ff-hint">Calories will be calculated as {autoCalories} kcal from macros.</p>
+        <p className="ff-hint">Calories calculated as {autoCalories} kcal ({Math.max(1, parseInt(form.quantity, 10) || 1)} unit{parseInt(form.quantity, 10) > 1 ? 's' : ''}).</p>
+      )}
+      {basePerUnit.calories > 0 && (
+        <p className="ff-hint" style={{ color: 'var(--blue)' }}>
+          Per unit: {basePerUnit.calories} kcal · P{basePerUnit.protein}g · C{basePerUnit.carbs}g · F{basePerUnit.fat}g (scales with quantity)
+        </p>
       )}
     </form>
   )

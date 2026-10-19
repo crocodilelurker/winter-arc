@@ -26,6 +26,7 @@ type Props = {
   onChange: (next: DayPlannerData) => void
   tasksData: TodoGraphData
   habitsData: NonNegotiablesData
+  onToggleTask?: (date: string, block: TimeBlock, forceCompleted?: boolean) => void
 }
 
 type DragPayload = {
@@ -38,7 +39,14 @@ type DragPayload = {
   sourceId?: string
 }
 
-export default function DayPlanner({ data, onChange, tasksData, habitsData }: Props) {
+export default function DayPlanner({
+  data,
+  onChange,
+  tasksData,
+  habitsData,
+  onToggleTask,
+}: Props) {
+
   const today = useMemo(() => todayKey(), [])
   const [selectedDate, setSelectedDate] = useState<string>(today)
   const [panelTab, setPanelTab] = useState<'all' | 'tasks' | 'habits'>('all')
@@ -699,10 +707,15 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                             className={`dp-block-check ${block.completed ? 'checked' : ''}`}
                             onClick={(e) => {
                               e.stopPropagation()
-                              onChange(toggleBlockCompleted(data, selectedDate, block.id))
+                              if (onToggleTask) {
+                                onToggleTask(selectedDate, block)
+                              } else {
+                                onChange(toggleBlockCompleted(data, selectedDate, block.id))
+                              }
                             }}
                             title={block.completed ? 'Mark incomplete' : 'Mark completed'}
                           >
+
                             {block.completed && (
                               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                                 <polyline points="20 6 9 17 4 12" />
@@ -1068,6 +1081,22 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                 />
               </div>
 
+              {editingBlock.id !== '__new__' && (
+                <div className="field">
+                  <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editingBlock.completed)}
+                      onChange={(e) =>
+                        setEditingBlock({ ...editingBlock, completed: e.target.checked })
+                      }
+                      style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '13px', fontWeight: 500 }}>Completed</span>
+                  </label>
+                </div>
+              )}
+
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                 {editingBlock.id !== '__new__' ? (
                   <button
@@ -1108,15 +1137,21 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                           }),
                         )
                       } else {
-                        onChange(
-                          updateTimeBlock(data, selectedDate, editingBlock.id, {
-                            title: editingBlock.title.trim() || 'Untitled Block',
-                            startMinute: editingBlock.startMinute,
-                            durationMinutes: editingBlock.durationMinutes,
-                            color: editingBlock.color,
-                            notes: editingBlock.notes?.trim() || undefined,
-                          }),
-                        )
+                        const origBlock = schedule.blocks.find((b) => b.id === editingBlock.id)
+                        if (origBlock && origBlock.completed !== editingBlock.completed && onToggleTask) {
+                          onToggleTask(selectedDate, editingBlock, editingBlock.completed)
+                        } else {
+                          onChange(
+                            updateTimeBlock(data, selectedDate, editingBlock.id, {
+                              title: editingBlock.title.trim() || 'Untitled Block',
+                              startMinute: editingBlock.startMinute,
+                              durationMinutes: editingBlock.durationMinutes,
+                              color: editingBlock.color,
+                              completed: editingBlock.completed,
+                              notes: editingBlock.notes?.trim() || undefined,
+                            }),
+                          )
+                        }
                       }
                       setEditingBlock(null)
                     }}
@@ -1125,6 +1160,7 @@ export default function DayPlanner({ data, onChange, tasksData, habitsData }: Pr
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         </div>

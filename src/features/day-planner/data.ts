@@ -153,9 +153,11 @@ export function addTimeBlock(
 ): DayPlannerData {
   const current = getDaySchedule(data, date)
   const newBlock: TimeBlock = {
+    completed: false,
     ...block,
     id: `tb-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
   }
+
 
   return {
     ...data,

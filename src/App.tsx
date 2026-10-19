@@ -6,11 +6,14 @@ import NonNegotiables from './features/non-negotiables'
 import Expenses from './features/expenses'
 import Learnings from './features/learnings'
 import DayPlanner from './features/day-planner'
+import { updateTimeBlock, type TimeBlock } from './features/day-planner/data'
+import { setBooleanHabit, setNumberHabit } from './features/non-negotiables/data'
 import { useDb } from './db/useDb'
 import Gate from './shell/Gate'
 import Menu from './shell/Menu'
 import ExportModal from './shell/ExportModal'
 import { usePwa } from './shell/usePwa'
+
 
 const NAV_ITEMS = [
   {
@@ -167,7 +170,75 @@ export default function App() {
   // Is a secondary feature active (one of those opened via 'More' on mobile)?
   const isSecondaryActive = ['gym', 'non-negotiables', 'expenses', 'learnings'].includes(feature || '')
 
+  const handleToggleTaskFromPlanner = (date: string, block: TimeBlock, forceCompleted?: boolean) => {
+    handle.update((prev) => {
+      const nextCompleted = forceCompleted !== undefined ? forceCompleted : !block.completed
+
+      // 1. Update the time block in dayPlanner
+      const updatedPlanner = updateTimeBlock(prev.features.dayPlanner, date, block.id, {
+        completed: nextCompleted,
+      })
+
+      // 2. Synchronize with matching task in todoGraph
+      let updatedTodoGraph = prev.features.todoGraph
+      const blockTitleNorm = block.title.trim().toLowerCase()
+
+      let foundTask = false
+      const days = { ...updatedTodoGraph.days }
+      for (const [dayKey, dayPlan] of Object.entries(days)) {
+        if (!Array.isArray(dayPlan.tasks)) continue
+        let dayChanged = false
+        const newTasks = dayPlan.tasks.map((t) => {
+          const titleMatch = t.title.trim().toLowerCase() === blockTitleNorm
+          const idMatch = Boolean(block.sourceId && t.id === block.sourceId)
+          if (idMatch || (block.category === 'task' && titleMatch) || titleMatch) {
+            foundTask = true
+            dayChanged = true
+            return {
+              ...t,
+              completed: nextCompleted,
+              completedAt: nextCompleted ? new Date().toISOString() : undefined,
+            }
+          }
+          return t
+        })
+        if (dayChanged) {
+          days[dayKey] = { ...dayPlan, tasks: newTasks }
+        }
+      }
+      if (foundTask) {
+        updatedTodoGraph = { ...updatedTodoGraph, days }
+      }
+
+      // 3. Synchronize with matching habit in nonNegotiables if category is non-negotiable
+      let updatedHabits = prev.features.nonNegotiables
+      if (block.category === 'non-negotiable') {
+        const habit = updatedHabits.habits.find(
+          (h) => (block.sourceId && h.id === block.sourceId) || h.name.trim().toLowerCase() === blockTitleNorm,
+        )
+        if (habit) {
+          if (habit.type === 'boolean') {
+            updatedHabits = setBooleanHabit(updatedHabits, date, habit.id, nextCompleted)
+          } else {
+            updatedHabits = setNumberHabit(updatedHabits, date, habit.id, nextCompleted ? (habit.target || 1) : 0)
+          }
+        }
+      }
+
+      return {
+        ...prev,
+        features: {
+          ...prev.features,
+          dayPlanner: updatedPlanner,
+          todoGraph: updatedTodoGraph,
+          nonNegotiables: updatedHabits,
+        },
+      }
+    })
+  }
+
   return (
+
     <div className="app">
       {/* Sidebar (Desktop only) */}
       <aside className="app-sidebar">
@@ -411,6 +482,7 @@ export default function App() {
                   features: { ...prev.features, dayPlanner: next },
                 }))
               }
+              onToggleTask={handleToggleTaskFromPlanner}
               tasksData={db.features.todoGraph}
               habitsData={db.features.nonNegotiables}
             />
@@ -427,13 +499,56 @@ export default function App() {
           ) : feature === 'todo-graph' ? (
             <TodoGraph
               data={db.features.todoGraph}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, todoGraph: next },
-                }))
-              }
+              onChange={(nextTodoGraph) => {
+                handle.update((prev) => {
+                  let updatedPlanner = prev.features.dayPlanner
+                  const prevDays = prev.features.todoGraph.days
+                  const nextDays = nextTodoGraph.days
+
+                  let plannerChanged = false
+                  const plannerDays = { ...updatedPlanner.days }
+
+                  for (const [dKey, nextDay] of Object.entries(nextDays)) {
+                    const prevDay = prevDays[dKey]
+                    for (const nextTask of nextDay.tasks) {
+                      const prevTask = prevDay?.tasks.find((t) => t.id === nextTask.id)
+                      if (!prevTask || prevTask.completed !== nextTask.completed) {
+                        for (const [pDate, schedule] of Object.entries(plannerDays)) {
+                          let schedChanged = false
+                          const newBlocks = schedule.blocks.map((b) => {
+                            const titleMatch = b.title.trim().toLowerCase() === nextTask.title.trim().toLowerCase()
+                            const idMatch = b.sourceId === nextTask.id
+                            if (idMatch || (b.category === 'task' && titleMatch)) {
+                              schedChanged = true
+                              return { ...b, completed: nextTask.completed }
+                            }
+                            return b
+                          })
+                          if (schedChanged) {
+                            plannerDays[pDate] = { ...schedule, blocks: newBlocks }
+                            plannerChanged = true
+                          }
+                        }
+                      }
+                    }
+                  }
+
+                  if (plannerChanged) {
+                    updatedPlanner = { ...updatedPlanner, days: plannerDays }
+                  }
+
+                  return {
+                    ...prev,
+                    features: {
+                      ...prev.features,
+                      todoGraph: nextTodoGraph,
+                      dayPlanner: updatedPlanner,
+                    },
+                  }
+                })
+              }}
             />
+
           ) : feature === 'gym' ? (
             <Gym
               data={db.features.gym}
