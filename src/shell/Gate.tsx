@@ -70,6 +70,15 @@ export default function Gate({
               Start a new plan
             </button>
 
+            <button
+              type="button"
+              className="ghost lg gate-demo-btn"
+              style={{ width: '100%', justifyContent: 'center' }}
+              onClick={() => handle.startDemo()}
+            >
+              ✨ Try Demo Showcase Data
+            </button>
+
             <div className="gate-divider"><span>or</span></div>
 
             <button

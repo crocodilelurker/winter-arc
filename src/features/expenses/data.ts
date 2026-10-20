@@ -47,11 +47,8 @@ export function ensureExpensesData(raw: unknown): ExpensesData {
   if (!raw || typeof raw !== 'object') return createExpensesData()
   const obj = raw as Record<string, unknown>
 
-  // Default to Rupees (₹); if previously stored as '$', migrate to '₹'
-  let currency = typeof obj.currency === 'string' && obj.currency.trim() ? obj.currency : '₹'
-  if (currency === '$') {
-    currency = '₹'
-  }
+  // Default to Rupees (₹) if unspecified, but respect any user-selected currency (including '$')
+  const currency = typeof obj.currency === 'string' && obj.currency.trim() ? obj.currency.trim() : '₹'
   const monthlyBudget = typeof obj.monthlyBudget === 'number' && obj.monthlyBudget > 0 ? obj.monthlyBudget : undefined
 
   // Groups
@@ -318,4 +315,27 @@ export function formatCurrency(amount: number, currency = '₹'): string {
     minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
     maximumFractionDigits: 2,
   })}`
+}
+
+export function exportExpensesAsCsv(data: ExpensesData): string {
+  const rows: string[] = [
+    'Date,Item,Amount,Currency,Category,Necessity,CreatedAt',
+  ]
+  const groupMap = new Map<string, string>()
+  data.groups.forEach((g) => groupMap.set(g.id, g.name))
+
+  const sortedDates = Object.keys(data.days).sort()
+  for (const dk of sortedDates) {
+    const day = data.days[dk]
+    if (!day || !Array.isArray(day.items)) continue
+    for (const it of day.items) {
+      const groupName = groupMap.get(it.groupId) || 'Other'
+      const nec = it.isNecessary ? 'Necessary' : 'Discretionary'
+      const titleEsc = `"${(it.title || '').replace(/"/g, '""')}"`
+      const catEsc = `"${groupName.replace(/"/g, '""')}"`
+      rows.push(`${dk},${titleEsc},${it.amount},${data.currency || '₹'},${catEsc},${nec},${it.createdAt || dk}`)
+    }
+  }
+
+  return rows.join('\n')
 }

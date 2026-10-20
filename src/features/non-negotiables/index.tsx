@@ -11,6 +11,9 @@ import {
   stepNumberHabit,
   addHabit,
   deleteHabit,
+  getHabitStreak,
+  getAllHabitsStreak,
+  moveHabit,
 } from './data'
 import Calendar from './Calendar'
 import './non-negotiables.css'
@@ -31,6 +34,7 @@ export default function NonNegotiables({ data, onChange }: Props) {
 
   const dayLog = getOrCreateDayLog(data, selectedDate)
   const { fulfilled, total, isAllFulfilled, percent } = getDayProgress(data.habits, dayLog)
+  const overallStreak = useMemo(() => getAllHabitsStreak(data, today), [data, today])
 
   const shiftDay = (days: number) => {
     const [y, m, d] = selectedDate.split('-').map(Number)
@@ -95,6 +99,11 @@ export default function NonNegotiables({ data, onChange }: Props) {
           {total > 0 && (
             <div className="habits-banner-sub">
               {isAllFulfilled ? 'Great job today.' : `${total - fulfilled} remaining today.`}
+              {overallStreak.best > 0 && (
+                <span className="banner-streak-text">
+                  {' · '}🔥 <strong>{overallStreak.current}</strong>-day streak (Best: {overallStreak.best}d)
+                </span>
+              )}
             </div>
           )}
           {total > 0 && (
@@ -106,11 +115,20 @@ export default function NonNegotiables({ data, onChange }: Props) {
             </div>
           )}
         </div>
-        {total > 0 && (
-          <div className={`habits-banner-badge ${isAllFulfilled ? 'done' : 'progress'}`}>
-            {isAllFulfilled ? 'Done' : `${percent}%`}
-          </div>
-        )}
+        <div className="habits-banner-right-badges">
+          {total > 0 && (
+            <div className="habits-streak-badge" title="Overall streak (all habits completed)">
+              <span className="flame-icon">🔥</span>
+              <span className="streak-count">{overallStreak.current}</span>
+              <span className="streak-label">day streak</span>
+            </div>
+          )}
+          {total > 0 && (
+            <div className={`habits-banner-badge ${isAllFulfilled ? 'done' : 'progress'}`}>
+              {isAllFulfilled ? 'Done' : `${percent}%`}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Main workspace */}
@@ -177,11 +195,29 @@ export default function NonNegotiables({ data, onChange }: Props) {
               <p>Click "Add Habit" to create your first non-negotiable.</p>
             </div>
           ) : (
-            data.habits.map((habit) => {
+            data.habits.map((habit, index) => {
               const val = dayLog.values[habit.id]
               const done = isHabitFulfilled(habit, val)
+              const habitStreak = getHabitStreak(habit.id, data, today)
               return (
                 <div key={habit.id} className={`habit-item ${done ? 'is-done' : ''}`}>
+                  <div className="habit-reorder-group" title="Reorder priority">
+                    <button
+                      type="button"
+                      className="habit-reorder-btn"
+                      onClick={() => onChange(moveHabit(data, habit.id, 'up'))}
+                      disabled={index === 0}
+                      title="Move up"
+                    >▲</button>
+                    <button
+                      type="button"
+                      className="habit-reorder-btn"
+                      onClick={() => onChange(moveHabit(data, habit.id, 'down'))}
+                      disabled={index === data.habits.length - 1}
+                      title="Move down"
+                    >▼</button>
+                  </div>
+
                   <div className="habit-item-left">
                     <button
                       type="button"
@@ -199,7 +235,24 @@ export default function NonNegotiables({ data, onChange }: Props) {
                       {done ? '✓' : ''}
                     </button>
                     <div className="habit-info">
-                      <span className="habit-name">{habit.name}</span>
+                      <div className="habit-name-row">
+                        <span className="habit-name">{habit.name}</span>
+                        {habitStreak.current > 0 ? (
+                          <span
+                            className="habit-streak-pill active"
+                            title={`Current streak: ${habitStreak.current}d · Best: ${habitStreak.best}d`}
+                          >
+                            🔥 {habitStreak.current}d
+                          </span>
+                        ) : habitStreak.best > 0 ? (
+                          <span
+                            className="habit-streak-pill inactive"
+                            title={`Best streak: ${habitStreak.best}d`}
+                          >
+                            Best: {habitStreak.best}d
+                          </span>
+                        ) : null}
+                      </div>
                       <span className="habit-type-hint">
                         {habit.type === 'boolean' ? 'Yes / No' : `Target: ${habit.target} ${habit.unit || ''}`}
                       </span>

@@ -255,3 +255,138 @@ export function deleteHabit(data: NonNegotiablesData, habitId: string): NonNegot
     habits: data.habits.filter((h) => h.id !== habitId),
   }
 }
+
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d + days)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
+}
+
+export function getHabitStreak(
+  habitId: string,
+  data: NonNegotiablesData,
+  todayStr = new Date().toISOString().split('T')[0],
+): { current: number; best: number } {
+  const habit = data.habits.find((h) => h.id === habitId)
+  if (!habit) return { current: 0, best: 0 }
+
+  let current = 0
+  let checkDate = todayStr
+  const todayLog = data.history[todayStr]
+  const todayFulfilled = isHabitFulfilled(habit, todayLog?.values?.[habitId])
+
+  if (todayFulfilled) {
+    current = 1
+    checkDate = addDays(todayStr, -1)
+  } else {
+    checkDate = addDays(todayStr, -1)
+  }
+
+  while (true) {
+    const log = data.history[checkDate]
+    if (log && isHabitFulfilled(habit, log.values?.[habitId])) {
+      current++
+      checkDate = addDays(checkDate, -1)
+    } else {
+      break
+    }
+  }
+
+  const dates = Object.keys(data.history).sort()
+  let best = current
+  let tempStreak = 0
+  let prevDate = ''
+
+  for (const d of dates) {
+    const log = data.history[d]
+    if (isHabitFulfilled(habit, log?.values?.[habitId])) {
+      if (prevDate && addDays(prevDate, 1) === d) {
+        tempStreak++
+      } else {
+        tempStreak = 1
+      }
+      prevDate = d
+      if (tempStreak > best) best = tempStreak
+    } else {
+      tempStreak = 0
+      prevDate = ''
+    }
+  }
+
+  return { current, best: Math.max(current, best) }
+}
+
+export function getAllHabitsStreak(
+  data: NonNegotiablesData,
+  todayStr = new Date().toISOString().split('T')[0],
+): { current: number; best: number } {
+  if (data.habits.length === 0) return { current: 0, best: 0 }
+
+  let current = 0
+  let checkDate = todayStr
+  const todayLog = data.history[todayStr]
+  const todayProgress = getDayProgress(data.habits, todayLog)
+
+  if (todayProgress.isAllFulfilled) {
+    current = 1
+    checkDate = addDays(todayStr, -1)
+  } else {
+    checkDate = addDays(todayStr, -1)
+  }
+
+  while (true) {
+    const log = data.history[checkDate]
+    if (log && getDayProgress(data.habits, log).isAllFulfilled) {
+      current++
+      checkDate = addDays(checkDate, -1)
+    } else {
+      break
+    }
+  }
+
+  const dates = Object.keys(data.history).sort()
+  let best = current
+  let tempStreak = 0
+  let prevDate = ''
+
+  for (const d of dates) {
+    const log = data.history[d]
+    if (log && getDayProgress(data.habits, log).isAllFulfilled) {
+      if (prevDate && addDays(prevDate, 1) === d) {
+        tempStreak++
+      } else {
+        tempStreak = 1
+      }
+      prevDate = d
+      if (tempStreak > best) best = tempStreak
+    } else {
+      tempStreak = 0
+      prevDate = ''
+    }
+  }
+
+  return { current, best: Math.max(current, best) }
+}
+
+export function moveHabit(
+  data: NonNegotiablesData,
+  habitId: string,
+  direction: 'up' | 'down',
+): NonNegotiablesData {
+  const index = data.habits.findIndex((h) => h.id === habitId)
+  if (index === -1) return data
+  const targetIndex = direction === 'up' ? index - 1 : index + 1
+  if (targetIndex < 0 || targetIndex >= data.habits.length) return data
+
+  const nextHabits = [...data.habits]
+  const temp = nextHabits[index]
+  nextHabits[index] = nextHabits[targetIndex]
+  nextHabits[targetIndex] = temp
+
+  return {
+    ...data,
+    habits: nextHabits,
+  }
+}
+

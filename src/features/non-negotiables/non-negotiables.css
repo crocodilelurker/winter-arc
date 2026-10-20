@@ -62,6 +62,43 @@
 
 .habits-banner-fill.is-done { background: var(--green); }
 
+.habits-banner-right-badges {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.habits-streak-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--r-full);
+  font-size: 12px;
+  color: #fbbf24;
+}
+
+.habits-streak-badge .flame-icon {
+  font-size: 14px;
+}
+
+.habits-streak-badge .streak-count {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.habits-streak-badge .streak-label {
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+.banner-streak-text {
+  color: #f59e0b;
+}
+
 .habits-banner-badge {
   flex-shrink: 0;
   padding: 6px 14px;
@@ -197,7 +234,48 @@
   color: #fff;
 }
 
+.habit-reorder-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0.35;
+  transition: opacity 0.15s;
+}
+
+.habit-item:hover .habit-reorder-group {
+  opacity: 1;
+}
+
+.habit-reorder-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-3);
+  font-size: 8px;
+  padding: 1px 3px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.12s;
+}
+
+.habit-reorder-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.habit-reorder-btn:disabled {
+  opacity: 0.15;
+  cursor: default;
+}
+
 .habit-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.habit-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 
 .habit-name {
   font-size: 14px;
@@ -206,6 +284,29 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.habit-streak-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+}
+
+.habit-streak-pill.active {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.habit-streak-pill.inactive {
+  background: var(--surface-2);
+  color: var(--text-3);
+  border: 1px solid var(--border);
 }
 
 .habit-item.is-done .habit-name { color: var(--text-3); }

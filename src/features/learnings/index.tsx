@@ -6,6 +6,7 @@ import {
   type LearningEntry,
   getDayLearning,
   addLearningEntry,
+  updateLearningEntry,
   deleteLearningEntry,
   setDayNote,
 } from './data'
@@ -24,6 +25,7 @@ export default function Learnings({ data, onChange }: Props) {
   const [selectedDate, setSelectedDate] = useState<string>(today)
   const [activeTab, setActiveTab] = useState<TabMode>('daily')
   const [showCalendar, setShowCalendar] = useState<boolean>(false)
+  const [editingEntry, setEditingEntry] = useState<(LearningEntry & { date?: string }) | null>(null)
 
   // Entry Form state
   const [entryType, setEntryType] = useState<LearningType>('learning')
@@ -259,6 +261,18 @@ export default function Learnings({ data, onChange }: Props) {
                         Link
                       </a>
                     )}
+                    <button
+                      type="button"
+                      className="ghost sm icon-btn lrn-edit-btn"
+                      onClick={() => setEditingEntry(item)}
+                      title="Edit entry"
+                      aria-label={`Edit ${item.title}`}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                    </button>
                   </div>
                   <h4 className="entry-title">{item.title}</h4>
                   {item.description && (
@@ -560,6 +574,18 @@ export default function Learnings({ data, onChange }: Props) {
                             )}
                             <button
                               type="button"
+                              className="ghost sm icon-btn lrn-edit-btn"
+                              onClick={() => setEditingEntry(item)}
+                              title="Edit entry"
+                              aria-label={`Edit ${item.title}`}
+                            >
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
                               className="ghost sm icon-btn is-danger lrn-del-btn"
                               onClick={() => handleDelete(item.id)}
                               title="Delete entry"
@@ -596,6 +622,124 @@ export default function Learnings({ data, onChange }: Props) {
           </div>
         </div>
       )}
+
+      {/* Edit Learning Modal */}
+      {editingEntry && (
+        <EditLearningModal
+          entry={editingEntry}
+          categories={data.categories}
+          onSave={(patch) => {
+            const entryDate = editingEntry.date || selectedDate
+            onChange(updateLearningEntry(data, entryDate, editingEntry.id, patch))
+            setEditingEntry(null)
+          }}
+          onClose={() => setEditingEntry(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function EditLearningModal({
+  entry,
+  categories,
+  onSave,
+  onClose,
+}: {
+  entry: LearningEntry & { date?: string }
+  categories: string[]
+  onSave: (patch: Partial<LearningEntry>) => void
+  onClose: () => void
+}) {
+  const [title, setTitle] = useState(entry.title)
+  const [type, setType] = useState<LearningType>(entry.type)
+  const [category, setCategory] = useState(entry.category)
+  const [description, setDescription] = useState(entry.description || '')
+  const [link, setLink] = useState(entry.link || '')
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) return
+    onSave({
+      title: title.trim(),
+      type,
+      category: category.trim() || categories[0] || 'General',
+      description: description.trim() || undefined,
+      link: link.trim() || undefined,
+    })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+        <div className="modal-header">
+          <h3>Edit {type === 'learning' ? 'Learning' : 'Creation'}</h3>
+          <button type="button" className="ghost sm" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="field-group">
+            <label className="field-label">Type</label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                className={`ghost sm ${type === 'learning' ? 'primary' : ''}`}
+                style={{ flex: 1 }}
+                onClick={() => setType('learning')}
+              >
+                💡 Learning
+              </button>
+              <button
+                type="button"
+                className={`ghost sm ${type === 'creation' ? 'primary' : ''}`}
+                style={{ flex: 1 }}
+                onClick={() => setType('creation')}
+              >
+                ⚡ Creation
+              </button>
+            </div>
+          </div>
+          <div className="field-group">
+            <label className="field-label">Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+          <div className="field-group">
+            <label className="field-label">Category</label>
+            <select value={category} onChange={(e) => setCategory(e.target.value)}>
+              {categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field-group">
+            <label className="field-label">Notes & Details (Optional)</label>
+            <textarea
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Key insights, notes, or details..."
+            />
+          </div>
+          <div className="field-group">
+            <label className="field-label">Reference Link (Optional)</label>
+            <input
+              type="url"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="https://..."
+            />
+          </div>
+          <div className="modal-footer" style={{ padding: '12px 0 0 0', marginTop: '8px' }}>
+            <button type="button" className="ghost sm" onClick={onClose}>Cancel</button>
+            <button type="submit" className="primary sm">Save Changes</button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
