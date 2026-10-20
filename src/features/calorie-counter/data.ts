@@ -270,6 +270,37 @@ export function removeEntry(
   }
 }
 
+export function updateEntry(
+  data: CalorieCounterData,
+  dateKey: string,
+  entryId: string,
+  patch: Partial<NewEntry>,
+): CalorieCounterData {
+  const day = data.days[dateKey]
+  if (!day) return data
+  const nextEntries = day.entries.map((e) => {
+    if (e.id !== entryId) return e
+    return {
+      ...e,
+      ...patch,
+      calories: patch.calories !== undefined ? Math.max(0, patch.calories) : e.calories,
+      protein: patch.protein !== undefined ? Math.max(0, patch.protein) : e.protein,
+      carbs: patch.carbs !== undefined ? Math.max(0, patch.carbs) : e.carbs,
+      fat: patch.fat !== undefined ? Math.max(0, patch.fat) : e.fat,
+      name: patch.name !== undefined ? patch.name.trim() : e.name,
+      quantity: patch.quantity !== undefined ? patch.quantity : e.quantity,
+      meal: patch.meal !== undefined ? patch.meal : e.meal,
+    }
+  })
+  return {
+    ...data,
+    days: {
+      ...data.days,
+      [dateKey]: { ...day, entries: nextEntries },
+    },
+  }
+}
+
 export function setWater(
   data: CalorieCounterData,
   dateKey: string,

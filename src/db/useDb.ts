@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createDb, parseDb, saveFileName, serializeDb, type Db } from './types'
+import { createDemoDb } from './demoData'
 
 export type SaveStatus = 'saved' | 'saving' | 'dirty' | 'permission-needed' | 'unlinked'
 
@@ -19,6 +20,7 @@ export type DbHandle = {
   /** Replaces the whole db. Marks the session unsaved. */
   update: (fn: (db: Db) => Db) => void
   start: (name: string) => void
+  startDemo: () => void
   open: (file: File, handle?: FileSystemFileHandle | null) => Promise<void>
   openWithPicker: () => Promise<boolean>
   save: () => Promise<boolean>
@@ -58,10 +60,117 @@ function clearSavedSession() {
   } catch {}
 }
 
+function openIdb(): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
+    if (typeof window === 'undefined' || !('indexedDB' in window)) return resolve(null)
+    const req = indexedDB.open('growth-arc-store', 2)
+    req.onupgradeneeded = () => {
+      const db = req.result
+      if (!db.objectStoreNames.contains('handles')) {
+        db.createObjectStore('handles')
+      }
+      if (!db.objectStoreNames.contains('sessions')) {
+        db.createObjectStore('sessions')
+      }
+    }
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => resolve(null)
+  })
+}
+
+async function getHandleFromIdb(): Promise<FileSystemFileHandle | null> {
+  const db = await openIdb()
+  if (!db) return null
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction('handles', 'readonly')
+      const store = tx.objectStore('handles')
+      const req = store.get('current')
+      req.onsuccess = () => resolve((req.result as FileSystemFileHandle) || null)
+      req.onerror = () => resolve(null)
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
+async function saveHandleToIdb(handle: FileSystemFileHandle | null): Promise<void> {
+  const db = await openIdb()
+  if (!db) return
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction('handles', 'readwrite')
+      const store = tx.objectStore('handles')
+      if (handle) {
+        store.put(handle, 'current')
+      } else {
+        store.delete('current')
+      }
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => resolve()
+    } catch {
+      resolve()
+    }
+  })
+}
+
+async function getSessionFromIdb(): Promise<{ db: Db; fileName: string | null; dirty: boolean } | null> {
+  const db = await openIdb()
+  if (!db) return null
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction('sessions', 'readonly')
+      const store = tx.objectStore('sessions')
+      const req = store.get('active')
+      req.onsuccess = () => {
+        if (!req.result || typeof req.result !== 'object') return resolve(null)
+        try {
+          const res = req.result as { dbText: string; fileName: string | null; dirty: boolean }
+          const parsed = parseDb(res.dbText)
+          resolve({ db: parsed, fileName: res.fileName, dirty: Boolean(res.dirty) })
+        } catch {
+          resolve(null)
+        }
+      }
+      req.onerror = () => resolve(null)
+    } catch {
+      resolve(null)
+    }
+  })
+}
+
+async function saveSessionToIdb(dbInstance: Db | null, fileName: string | null, dirty: boolean): Promise<void> {
+  const db = await openIdb()
+  if (!db) return
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction('sessions', 'readwrite')
+      const store = tx.objectStore('sessions')
+      if (dbInstance) {
+        const text = serializeDb(dbInstance)
+        store.put({ dbText: text, fileName, dirty, updatedAt: new Date().toISOString() }, 'active')
+      } else {
+        store.delete('active')
+      }
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => resolve()
+    } catch {
+      resolve()
+    }
+  })
+}
+
 function persistSession(db: Db | null, fileName: string | null, dirty: boolean) {
+  // Always asynchronously persist the full DB into IndexedDB (gigabyte quota)
+  void saveSessionToIdb(db, fileName, dirty)
+
   try {
     if (db) {
-      localStorage.setItem(KEY_SESSION_DB, serializeDb(db))
+      try {
+        localStorage.setItem(KEY_SESSION_DB, serializeDb(db))
+      } catch {
+        // If localStorage 5MB quota is exceeded, IndexedDB has already persisted it
+      }
       if (fileName) {
         localStorage.setItem(KEY_SESSION_FILENAME, fileName)
       } else {
@@ -72,58 +181,8 @@ function persistSession(db: Db | null, fileName: string | null, dirty: boolean) 
       clearSavedSession()
     }
   } catch (err) {
-    console.warn('Failed to persist session to localStorage:', err)
+    console.warn('Failed to persist session flags to localStorage:', err)
   }
-}
-
-function getHandleFromIdb(): Promise<FileSystemFileHandle | null> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !('indexedDB' in window)) return resolve(null)
-    const req = indexedDB.open('growth-arc-store', 1)
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore('handles')
-    }
-    req.onsuccess = () => {
-      const db = req.result
-      try {
-        const tx = db.transaction('handles', 'readonly')
-        const store = tx.objectStore('handles')
-        const getReq = store.get('current')
-        getReq.onsuccess = () => resolve((getReq.result as FileSystemFileHandle) || null)
-        getReq.onerror = () => resolve(null)
-      } catch {
-        resolve(null)
-      }
-    }
-    req.onerror = () => resolve(null)
-  })
-}
-
-function saveHandleToIdb(handle: FileSystemFileHandle | null): Promise<void> {
-  return new Promise((resolve) => {
-    if (typeof window === 'undefined' || !('indexedDB' in window)) return resolve()
-    const req = indexedDB.open('growth-arc-store', 1)
-    req.onupgradeneeded = () => {
-      req.result.createObjectStore('handles')
-    }
-    req.onsuccess = () => {
-      const db = req.result
-      try {
-        const tx = db.transaction('handles', 'readwrite')
-        const store = tx.objectStore('handles')
-        if (handle) {
-          store.put(handle, 'current')
-        } else {
-          store.delete('current')
-        }
-        tx.oncomplete = () => resolve()
-        tx.onerror = () => resolve()
-      } catch {
-        resolve()
-      }
-    }
-    req.onerror = () => resolve()
-  })
 }
 
 async function verifyPermission(
@@ -195,7 +254,7 @@ export function useDb(): DbHandle {
   const fileNameRef = useRef<string | null>(fileName)
   fileNameRef.current = fileName
 
-  // Try to restore file handle from IndexedDB on initial mount
+  // Try to restore file handle and session from IndexedDB on initial mount
   useEffect(() => {
     void getHandleFromIdb().then(async (h) => {
       if (h) {
@@ -210,6 +269,20 @@ export function useDb(): DbHandle {
         }
       }
     })
+
+    // If localStorage was empty, quota-blocked, or cleared, load from IndexedDB
+    if (!dbRef.current) {
+      void getSessionFromIdb().then((idbSession) => {
+        if (idbSession && !dbRef.current) {
+          setDb(idbSession.db)
+          dbRef.current = idbSession.db
+          setFileName(idbSession.fileName)
+          fileNameRef.current = idbSession.fileName
+          setDirty(idbSession.dirty)
+          setLastSavedAt(new Date())
+        }
+      })
+    }
   }, [])
 
   // Auto-persist active session state to localStorage on every change
@@ -279,6 +352,19 @@ export function useDb(): DbHandle {
     fileHandleRef.current = null
     setFileName(null)
     fileNameRef.current = null
+    setDirty(false)
+    setLastSavedAt(new Date())
+    void saveHandleToIdb(null)
+  }, [])
+
+  const startDemo = useCallback(() => {
+    const next = createDemoDb()
+    setDb(next)
+    dbRef.current = next
+    setFileHandle(null)
+    fileHandleRef.current = null
+    setFileName('showcase-demo.json')
+    fileNameRef.current = 'showcase-demo.json'
     setDirty(false)
     setLastSavedAt(new Date())
     void saveHandleToIdb(null)
@@ -500,6 +586,7 @@ export function useDb(): DbHandle {
     setLastSavedAt(null)
     clearSavedSession()
     void saveHandleToIdb(null)
+    void saveSessionToIdb(null, null, false)
   }, [])
 
   // Calculate comprehensive saveStatus
@@ -531,6 +618,7 @@ export function useDb(): DbHandle {
     grantDiskPermission,
     update,
     start,
+    startDemo,
     open,
     openWithPicker,
     save,

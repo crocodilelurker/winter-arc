@@ -391,6 +391,7 @@
   border-color: var(--blue);
 }
 
+.lrn-edit-btn,
 .lrn-del-btn {
   padding: 4px !important;
   width: 24px !important;
@@ -400,6 +401,11 @@
   justify-content: center;
   border-radius: 6px;
   color: var(--text-2);
+}
+
+.lrn-edit-btn:hover {
+  color: var(--blue);
+  background: var(--surface-3);
 }
 
 .lrn-del-btn:hover {

@@ -2,11 +2,15 @@ import { useState, useMemo } from 'react'
 import { todayKey } from '../../db/types'
 import {
   type ExpensesData,
+  type ExpenseItem,
+  type ExpenseGroup,
   getDayExpenses,
   addExpenseItem,
+  updateExpenseItem,
   deleteExpenseItem,
   getMonthSummary,
   formatCurrency,
+  exportExpensesAsCsv,
 } from './data'
 import Calendar from './Calendar'
 import GroupsManager from './GroupsManager'
@@ -30,6 +34,7 @@ export default function Expenses({ data, onChange }: Props) {
   const [selectedDate, setSelectedDate] = useState<string>(today)
   const [activeTab, setActiveTab] = useState<TabMode>('daily')
   const [showCalendar, setShowCalendar] = useState<boolean>(false)
+  const [editingItem, setEditingItem] = useState<ExpenseItem | null>(null)
 
   // 3-Question form states
   const [whatBought, setWhatBought] = useState('')
@@ -258,6 +263,34 @@ export default function Expenses({ data, onChange }: Props) {
           </svg>
           Groups & Categories ({data.groups.length})
         </button>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center' }}>
+          <button
+            type="button"
+            className="ghost sm"
+            onClick={() => {
+              const csv = exportExpensesAsCsv(data)
+              const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `growth-arc-expenses-${today}.csv`
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              URL.revokeObjectURL(url)
+            }}
+            title="Export all expense transactions as a CSV spreadsheet"
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Main Tab Content */}
@@ -507,6 +540,18 @@ export default function Expenses({ data, onChange }: Props) {
                             </span>
                             <button
                               type="button"
+                              className="ghost sm icon-btn exp-edit-btn"
+                              onClick={() => setEditingItem(item)}
+                              title="Edit entry"
+                              aria-label={`Edit ${item.title}`}
+                            >
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
                               className="ghost sm icon-btn is-danger exp-del-btn"
                               onClick={() => handleDeleteItem(item.id)}
                               title="Delete entry"
@@ -539,6 +584,116 @@ export default function Expenses({ data, onChange }: Props) {
           </div>
         </div>
       )}
+
+      {/* Edit Expense Modal */}
+      {editingItem && (
+        <EditExpenseModal
+          item={editingItem}
+          groups={data.groups}
+          currency={data.currency}
+          onSave={(patch) => {
+            onChange(updateExpenseItem(data, selectedDate, editingItem.id, patch))
+            setEditingItem(null)
+          }}
+          onClose={() => setEditingItem(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+function EditExpenseModal({
+  item,
+  groups,
+  currency,
+  onSave,
+  onClose,
+}: {
+  item: ExpenseItem
+  groups: ExpenseGroup[]
+  currency: string
+  onSave: (patch: Partial<ExpenseItem>) => void
+  onClose: () => void
+}) {
+  const [title, setTitle] = useState(item.title)
+  const [amount, setAmount] = useState(String(item.amount))
+  const [isNecessary, setIsNecessary] = useState(item.isNecessary)
+  const [groupId, setGroupId] = useState(item.groupId)
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    const parsedAmount = parseFloat(amount)
+    if (!title.trim() || isNaN(parsedAmount) || parsedAmount <= 0) return
+    onSave({
+      title: title.trim(),
+      amount: Math.round(parsedAmount * 100) / 100,
+      isNecessary,
+      groupId,
+    })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+        <div className="modal-header">
+          <h3>Edit Expenditure</h3>
+          <button type="button" className="ghost sm" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="field-group">
+            <label className="field-label">What did you buy?</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
+          <div className="field-group">
+            <label className="field-label">Amount ({currency})</label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              required
+            />
+          </div>
+          <div className="field-group">
+            <label className="field-label">Category</label>
+            <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field-group">
+            <label className="field-label">Was it necessary?</label>
+            <div className="necessity-toggle-group">
+              <button
+                type="button"
+                className={`necessity-btn necessary ${isNecessary ? 'is-selected' : ''}`}
+                onClick={() => setIsNecessary(true)}
+              >
+                Yes, Necessary
+              </button>
+              <button
+                type="button"
+                className={`necessity-btn unnecessary ${!isNecessary ? 'is-selected' : ''}`}
+                onClick={() => setIsNecessary(false)}
+              >
+                No, Discretionary
+              </button>
+            </div>
+          </div>
+          <div className="modal-footer" style={{ padding: '12px 0 0 0', marginTop: '8px' }}>
+            <button type="button" className="ghost sm" onClick={onClose}>Cancel</button>
+            <button type="submit" className="primary sm">Save Changes</button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

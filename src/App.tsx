@@ -1,18 +1,20 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import CalorieCounter from './features/calorie-counter'
-import TodoGraph from './features/todo-graph'
 import Gym from './features/gym'
 import NonNegotiables from './features/non-negotiables'
 import Expenses from './features/expenses'
 import Learnings from './features/learnings'
-import DayPlanner from './features/day-planner'
-import Board from './features/board'
+
+const TodoGraph = lazy(() => import('./features/todo-graph'))
+const DayPlanner = lazy(() => import('./features/day-planner'))
+const Board = lazy(() => import('./features/board'))
 import { updateTimeBlock, type TimeBlock } from './features/day-planner/data'
 import { setBooleanHabit, setNumberHabit } from './features/non-negotiables/data'
 import { useDb } from './db/useDb'
 import Gate from './shell/Gate'
 import Menu from './shell/Menu'
 import ExportModal from './shell/ExportModal'
+import CommandPalette from './shell/CommandPalette'
 import { usePwa } from './shell/usePwa'
 
 
@@ -136,6 +138,7 @@ export default function App() {
   })
   const [showExport, setShowExport] = useState(false)
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -161,13 +164,16 @@ export default function App() {
     }
   }, [feature])
 
-  // Cmd/Ctrl+S to save
+  // Cmd/Ctrl+S to save, Cmd/Ctrl+K for Command Palette
   useEffect(() => {
     if (!handle.db) return
     const onKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
         e.preventDefault()
         void handle.save()
+      } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setCommandPaletteOpen((prev) => !prev)
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -422,6 +428,20 @@ export default function App() {
               </span>
             </button>
 
+            {/* Command Palette search trigger */}
+            <button
+              type="button"
+              className="mobile-menu-trigger"
+              onClick={() => setCommandPaletteOpen(true)}
+              title="Search and Jump (Cmd+K)"
+              aria-label="Search and Jump"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </button>
+
             {/* Menu trigger button */}
             <button
               type="button"
@@ -443,6 +463,19 @@ export default function App() {
         <div className="app-topbar">
           <div className="app-topbar-left">
             <h1 className="app-topbar-title">{pageTitle}</h1>
+            <button
+              type="button"
+              className="command-palette-trigger-btn"
+              onClick={() => setCommandPaletteOpen(true)}
+              title="Search or jump anywhere (Cmd+K)"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <span>Jump anywhere...</span>
+              <kbd className="kbd-shortcut">⌘K</kbd>
+            </button>
           </div>
           <div className="app-topbar-right">
             {handle.saveStatus === 'permission-needed' && (
@@ -491,138 +524,146 @@ export default function App() {
         </div>
 
         <div className={`app-content ${feature === 'board' ? 'app-content-board' : ''}`}>
-          {feature === 'day-planner' ? (
-            <DayPlanner
-              data={db.features.dayPlanner}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, dayPlanner: next },
-                }))
-              }
-              onToggleTask={handleToggleTaskFromPlanner}
-              tasksData={db.features.todoGraph}
-              habitsData={db.features.nonNegotiables}
-            />
-          ) : feature === 'calorie-counter' ? (
-            <CalorieCounter
-              data={db.features.calorieCounter}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, calorieCounter: next },
-                }))
-              }
-            />
-          ) : feature === 'todo-graph' ? (
-            <TodoGraph
-              data={db.features.todoGraph}
-              onChange={(nextTodoGraph) => {
-                handle.update((prev) => {
-                  let updatedPlanner = prev.features.dayPlanner
-                  const prevDays = prev.features.todoGraph.days
-                  const nextDays = nextTodoGraph.days
+          <Suspense
+            fallback={
+              <div className="feature-lazy-loading">
+                <div className="lazy-spinner" />
+                <span>Loading workspace...</span>
+              </div>
+            }
+          >
+            {feature === 'day-planner' ? (
+              <DayPlanner
+                data={db.features.dayPlanner}
+                onChange={(next) =>
+                  handle.update((prev) => ({
+                    ...prev,
+                    features: { ...prev.features, dayPlanner: next },
+                  }))
+                }
+                onToggleTask={handleToggleTaskFromPlanner}
+                tasksData={db.features.todoGraph}
+                habitsData={db.features.nonNegotiables}
+              />
+            ) : feature === 'calorie-counter' ? (
+              <CalorieCounter
+                data={db.features.calorieCounter}
+                onChange={(next) =>
+                  handle.update((prev) => ({
+                    ...prev,
+                    features: { ...prev.features, calorieCounter: next },
+                  }))
+                }
+              />
+            ) : feature === 'todo-graph' ? (
+              <TodoGraph
+                data={db.features.todoGraph}
+                onChange={(nextTodoGraph) => {
+                  handle.update((prev) => {
+                    let updatedPlanner = prev.features.dayPlanner
+                    const prevDays = prev.features.todoGraph.days
+                    const nextDays = nextTodoGraph.days
 
-                  let plannerChanged = false
-                  const plannerDays = { ...updatedPlanner.days }
+                    let plannerChanged = false
+                    const plannerDays = { ...updatedPlanner.days }
 
-                  for (const [dKey, nextDay] of Object.entries(nextDays)) {
-                    if (!nextDay || !Array.isArray(nextDay.tasks)) continue
-                    const prevDay = prevDays?.[dKey]
-                    const prevDayTasks = Array.isArray(prevDay?.tasks) ? prevDay.tasks : []
-                    for (const nextTask of nextDay.tasks) {
-                      const prevTask = prevDayTasks.find((t) => t.id === nextTask.id)
-                      if (!prevTask || prevTask.completed !== nextTask.completed) {
-                        for (const [pDate, schedule] of Object.entries(plannerDays)) {
-                          if (!schedule || !Array.isArray(schedule.blocks)) continue
-                          let schedChanged = false
-                          const newBlocks = schedule.blocks.map((b) => {
-                            const titleMatch = b.title.trim().toLowerCase() === nextTask.title.trim().toLowerCase()
-                            const idMatch = b.sourceId === nextTask.id
-                            if (idMatch || (b.category === 'task' && titleMatch)) {
-                              schedChanged = true
-                              return { ...b, completed: nextTask.completed }
+                    for (const [dKey, nextDay] of Object.entries(nextDays)) {
+                      if (!nextDay || !Array.isArray(nextDay.tasks)) continue
+                      const prevDay = prevDays?.[dKey]
+                      const prevDayTasks = Array.isArray(prevDay?.tasks) ? prevDay.tasks : []
+                      for (const nextTask of nextDay.tasks) {
+                        const prevTask = prevDayTasks.find((t) => t.id === nextTask.id)
+                        if (!prevTask || prevTask.completed !== nextTask.completed) {
+                          for (const [pDate, schedule] of Object.entries(plannerDays)) {
+                            if (!schedule || !Array.isArray(schedule.blocks)) continue
+                            let schedChanged = false
+                            const newBlocks = schedule.blocks.map((b) => {
+                              const titleMatch = b.title.trim().toLowerCase() === nextTask.title.trim().toLowerCase()
+                              const idMatch = b.sourceId === nextTask.id
+                              if (idMatch || (b.category === 'task' && titleMatch)) {
+                                schedChanged = true
+                                return { ...b, completed: nextTask.completed }
+                              }
+                              return b
+                            })
+                            if (schedChanged) {
+                              plannerDays[pDate] = { ...schedule, blocks: newBlocks }
+                              plannerChanged = true
                             }
-                            return b
-                          })
-                          if (schedChanged) {
-                            plannerDays[pDate] = { ...schedule, blocks: newBlocks }
-                            plannerChanged = true
                           }
                         }
                       }
                     }
-                  }
 
-                  if (plannerChanged) {
-                    updatedPlanner = { ...updatedPlanner, days: plannerDays }
-                  }
+                    if (plannerChanged) {
+                      updatedPlanner = { ...updatedPlanner, days: plannerDays }
+                    }
 
-                  return {
+                    return {
+                      ...prev,
+                      features: {
+                        ...prev.features,
+                        todoGraph: nextTodoGraph,
+                        dayPlanner: updatedPlanner,
+                      },
+                    }
+                  })
+                }}
+              />
+            ) : feature === 'gym' ? (
+              <Gym
+                data={db.features.gym}
+                onChange={(next) =>
+                  handle.update((prev) => ({
                     ...prev,
-                    features: {
-                      ...prev.features,
-                      todoGraph: nextTodoGraph,
-                      dayPlanner: updatedPlanner,
-                    },
-                  }
-                })
-              }}
-            />
-
-          ) : feature === 'gym' ? (
-            <Gym
-              data={db.features.gym}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, gym: next },
-                }))
-              }
-            />
-          ) : feature === 'non-negotiables' ? (
-            <NonNegotiables
-              data={db.features.nonNegotiables}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, nonNegotiables: next },
-                }))
-              }
-            />
-          ) : feature === 'expenses' ? (
-            <Expenses
-              data={db.features.expenses}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, expenses: next },
-                }))
-              }
-            />
-          ) : feature === 'learnings' ? (
-            <Learnings
-              data={db.features.learnings}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, learnings: next },
-                }))
-              }
-            />
-          ) : feature === 'board' ? (
-            <Board
-              data={db.features.board}
-              onChange={(next) =>
-                handle.update((prev) => ({
-                  ...prev,
-                  features: { ...prev.features, board: next },
-                }))
-              }
-            />
-          ) : (
-            <Menu db={db} name={db.profile.name} onOpen={setFeature} />
-          )}
+                    features: { ...prev.features, gym: next },
+                  }))
+                }
+              />
+            ) : feature === 'non-negotiables' ? (
+              <NonNegotiables
+                data={db.features.nonNegotiables}
+                onChange={(next) =>
+                  handle.update((prev) => ({
+                    ...prev,
+                    features: { ...prev.features, nonNegotiables: next },
+                  }))
+                }
+              />
+            ) : feature === 'expenses' ? (
+              <Expenses
+                data={db.features.expenses}
+                onChange={(next) =>
+                  handle.update((prev) => ({
+                    ...prev,
+                    features: { ...prev.features, expenses: next },
+                  }))
+                }
+              />
+            ) : feature === 'learnings' ? (
+              <Learnings
+                data={db.features.learnings}
+                onChange={(next) =>
+                  handle.update((prev) => ({
+                    ...prev,
+                    features: { ...prev.features, learnings: next },
+                  }))
+                }
+              />
+            ) : feature === 'board' ? (
+              <Board
+                data={db.features.board}
+                onChange={(next) =>
+                  handle.update((prev) => ({
+                    ...prev,
+                    features: { ...prev.features, board: next },
+                  }))
+                }
+              />
+            ) : (
+              <Menu db={db} name={db.profile.name} onOpen={setFeature} />
+            )}
+          </Suspense>
         </div>
 
         {/* Mobile Bottom Navigation Bar (Mobile only <=768px) */}
@@ -879,6 +920,13 @@ export default function App() {
         </div>
       )}
       {showExport && <ExportModal db={db} onClose={() => setShowExport(false)} />}
+      <CommandPalette
+        isOpen={commandPaletteOpen}
+        onClose={() => setCommandPaletteOpen(false)}
+        db={db}
+        onNavigate={setFeature}
+        handle={handle}
+      />
     </div>
   )
 }

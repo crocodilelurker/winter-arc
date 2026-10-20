@@ -5,6 +5,7 @@ import './calorie-counter.css'
 import {
   MEALS,
   addEntry,
+  updateEntry,
   clearLibrary,
   dateKey,
   dayTotals,
@@ -19,13 +20,15 @@ import {
   type CalorieCounterData,
   type Goals,
   type LibraryItem,
+  type FoodEntry,
+  type MealId,
+  type NewEntry,
 } from './data'
 
 type Props = {
   data: CalorieCounterData
   onChange: (next: CalorieCounterData) => void
 }
-
 
 const round = (n: number) => Math.round(n * 10) / 10
 
@@ -35,6 +38,7 @@ export default function CalorieCounter({ data, onChange }: Props) {
   const [showGoals, setShowGoals] = useState(false)
   const [showLibrary, setShowLibrary] = useState(false)
   const [prefillItem, setPrefillItem] = useState<LibraryItem | null>(null)
+  const [editingFoodEntry, setEditingFoodEntry] = useState<FoodEntry | null>(null)
 
   const day = getDay(data, selected)
   const totals = dayTotals(day)
@@ -180,14 +184,28 @@ export default function CalorieCounter({ data, onChange }: Props) {
                           {e.calories} kcal · P{round(e.protein)} C{round(e.carbs)} F{round(e.fat)}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className="entry-del"
-                        aria-label={`Remove ${e.name}`}
-                        onClick={() => onChange(removeEntry(data, selected, e.id))}
-                      >
-                        ×
-                      </button>
+                      <div className="entry-actions">
+                        <button
+                          type="button"
+                          className="entry-edit-btn"
+                          title={`Edit ${e.name}`}
+                          aria-label={`Edit ${e.name}`}
+                          onClick={() => setEditingFoodEntry(e)}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 20h9" />
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="entry-del"
+                          aria-label={`Remove ${e.name}`}
+                          onClick={() => onChange(removeEntry(data, selected, e.id))}
+                        >
+                          ×
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
@@ -276,6 +294,18 @@ export default function CalorieCounter({ data, onChange }: Props) {
           )}
         </div>
       </div>
+
+      {/* Edit Food Modal */}
+      {editingFoodEntry && (
+        <EditFoodModal
+          entry={editingFoodEntry}
+          onSave={(patch) => {
+            onChange(updateEntry(data, selected, editingFoodEntry.id, patch))
+            setEditingFoodEntry(null)
+          }}
+          onClose={() => setEditingFoodEntry(null)}
+        />
+      )}
     </div>
   )
 }
@@ -322,5 +352,142 @@ function GoalsEditor({ goals, onSave }: { goals: Goals; onSave: (g: Goals) => vo
         Save Goals
       </button>
     </form>
+  )
+}
+
+function EditFoodModal({
+  entry,
+  onSave,
+  onClose,
+}: {
+  entry: FoodEntry
+  onSave: (patch: Partial<NewEntry>) => void
+  onClose: () => void
+}) {
+  const [name, setName] = useState(entry.name)
+  const [meal, setMeal] = useState<MealId>(entry.meal)
+  const [quantity, setQuantity] = useState(entry.quantity || '1')
+  const [calories, setCalories] = useState(String(entry.calories || ''))
+  const [protein, setProtein] = useState(String(entry.protein || ''))
+  const [carbs, setCarbs] = useState(String(entry.carbs || ''))
+  const [fat, setFat] = useState(String(entry.fat || ''))
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!name.trim()) return
+    const num = (v: string) => Math.max(0, parseFloat(v) || 0)
+    const calVal = num(calories)
+    const pVal = num(protein)
+    const cVal = num(carbs)
+    const fVal = num(fat)
+    const finalCal = calVal > 0 ? calVal : Math.round(pVal * 4 + cVal * 4 + fVal * 9)
+
+    onSave({
+      name: name.trim(),
+      meal,
+      quantity: quantity.trim() || '1',
+      calories: finalCal,
+      protein: pVal,
+      carbs: cVal,
+      fat: fVal,
+    })
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '440px' }}>
+        <div className="modal-header">
+          <h3>Edit Food Entry</h3>
+          <button type="button" className="ghost sm" onClick={onClose} aria-label="Close">✕</button>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div className="ff-field">
+            <label className="ff-label">Meal</label>
+            <div className="meal-tabs" style={{ marginTop: '4px' }}>
+              {MEALS.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  className={`meal-tab ${m.id === meal ? 'is-on' : ''}`}
+                  onClick={() => setMeal(m.id)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="ff-field">
+            <label className="ff-label">Food name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Rice, Chicken, Salad"
+              required
+              autoFocus
+            />
+          </div>
+          <div className="ff-field">
+            <label className="ff-label">Quantity / Portions</label>
+            <input
+              type="text"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="e.g. 2 pieces, 150g, 1 bowl"
+            />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+            <div className="ff-field">
+              <label className="ff-label">Calories (kcal)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={calories}
+                onChange={(e) => setCalories(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="ff-field">
+              <label className="ff-label">Protein (g)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={protein}
+                onChange={(e) => setProtein(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="ff-field">
+              <label className="ff-label">Carbs (g)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={carbs}
+                onChange={(e) => setCarbs(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+            <div className="ff-field">
+              <label className="ff-label">Fat (g)</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={fat}
+                onChange={(e) => setFat(e.target.value)}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div className="modal-footer" style={{ padding: '12px 0 0 0', marginTop: '8px' }}>
+            <button type="button" className="ghost sm" onClick={onClose}>Cancel</button>
+            <button type="submit" className="primary sm">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
 }

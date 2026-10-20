@@ -47,14 +47,19 @@ export default function TaskDetails({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Sync details when task changes
+  // Reset when switching to a different task
   useEffect(() => {
     setDetails(task.details)
     setShowSuggest(false)
     setNewSubtaskTitle('')
     setTimerSeconds(25 * 60)
     setIsTimerRunning(false)
-  }, [task.id, task.details])
+  }, [task.id])
+
+  // Sync details if external change occurs without resetting timer
+  useEffect(() => {
+    setDetails(task.details)
+  }, [task.details])
 
   // Timer interval
   useEffect(() => {
